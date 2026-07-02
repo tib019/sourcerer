@@ -109,7 +109,7 @@ export default function Home() {
           onUploadFile={handleUpload}
           onPasteText={handlePaste}
           onCloseCitation={() => setActiveCitation(null)}
-          busy={uploading}
+          busy={uploading || !notebook}
         />
         <ChatPanel
           messages={messages}

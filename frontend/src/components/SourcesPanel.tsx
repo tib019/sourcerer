@@ -53,6 +53,7 @@ export function SourcesPanel({
           accept=".pdf,.txt,.md"
           className="hidden"
           data-testid="file-input"
+          disabled={busy}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) onUploadFile(file);
