@@ -11,9 +11,16 @@ Die Git-History erzählt den Prozess (Conventional Commits, Docs vor Code, Tests
 
 - **Wofür genutzt:** Scaffolding (Repo-Struktur, Boilerplate), Implementierung der in CONTEXT.md
   spezifizierten Klassen, Testfälle ausformulieren, Diagramme aus der Architektur ableiten.
-- **Wo übersteuert:** _(während der Session ergänzen — echte Beispiele!)_
-  - Beispiel-Slot 1: …
-  - Beispiel-Slot 2: …
+- **Wo korrigiert (echte Beispiele aus der Session):**
+  - **Race-Condition im Upload-Flow, vom E2E-Test aufgedeckt:** Die erste UI-Version
+    erlaubte den Datei-Upload, bevor das Notebook vom Backend geladen war —
+    `handleUpload` brach bei `notebook === null` **stumm** ab (klassischer KI-Code:
+    Guard-Clause statt sauberem Zustand). Der Playwright-Test schlug fehl, die Analyse
+    zeigte den stillen No-Op. Fix: Upload-UI ist erst aktiv, wenn das Notebook bereit ist
+    (`busy = uploading || !notebook`), der Test wartet explizit auf den enabled-Zustand.
+  - **Lint als Review-Instanz:** ruff meldete `zip()` ohne `strict` im Vektor-Code —
+    bei ungleich langen chunk/vector-Listen wäre stumm gekürzt worden. Auf `strict=True`
+    gesetzt: Längen-Mismatch ist jetzt ein lauter Fehler statt Datenverlust.
 
 ## 3 · Eigene Design-Entscheidungen
 
