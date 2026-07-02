@@ -1,0 +1,15 @@
+Sourcerer Betriebshandbuch
+
+Kapitel 1: Grundlagen. Der Sourcerer ist ein Recherche-Assistent, der Antworten ausschliesslich aus hochgeladenen Quellen erzeugt. Das System wurde als Testprojekt fuer Everlast entwickelt. Der Projektname kombiniert die Woerter Source und Sorcerer.
+
+Kapitel 2: Ingest-Pipeline. Die Pipeline verarbeitet Dokumente in vier Schritten: Extraktion, Chunking, Embedding und Speicherung. Der Chunker verwendet eine Chunk-Groesse von 800 Tokens mit einem Overlap von 15 Prozent. Die Seitennummer jedes Chunks bleibt als Metadatum erhalten.
+
+Kapitel 3: Retrieval. Fuer jede Frage wird ein Query-Embedding berechnet. Der Vektor-Store liefert die Top-6 aehnlichsten Chunks per Cosine-Similarity zurueck. Treffer ohne jede Aehnlichkeit werden verworfen.
+
+Kapitel 4: Zitate. Jede Antwort belegt ihre Aussagen mit nummerierten Zitat-Markern. Ein Klick auf ein Zitat zeigt Dokumentname, Seite und die Original-Textstelle. Referenzen auf nicht existierende Quellen werden vom CitationMapper verworfen.
+
+Kapitel 5: Sicherheit. Hochgeladene Dokumente gelten als nicht vertrauenswuerdige Eingabe. Der Quellen-Text wird delimitiert vom System-Prompt getrennt. API-Schluessel liegen ausschliesslich server-seitig.
+
+Kapitel 6: Betrieb. Das Backend laeuft als Docker-Container auf Railway. Das Frontend wird auf Vercel deployt. Die CI-Pipeline nutzt GitHub Actions und blockiert Merges bei roten Tests.
+
+Kapitel 7: Grenzen. Der Sourcerer beantwortet keine Fragen ohne Quellengrundlage. Steht eine Antwort nicht in den Quellen, sagt das System dies offen. Halluzinierte Quellenangaben gelten als Fehler.

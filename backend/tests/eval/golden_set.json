@@ -1,0 +1,40 @@
+{
+  "answerable": [
+    {
+      "question": "Wie gross ist die Chunk-Groesse des Chunkers?",
+      "expected_in_citation": "800 Tokens"
+    },
+    {
+      "question": "Welchen Overlap verwendet der Chunker?",
+      "expected_in_citation": "15 Prozent"
+    },
+    {
+      "question": "Wie viele Chunks liefert der Vektor-Store pro Frage zurueck?",
+      "expected_in_citation": "Top-6"
+    },
+    {
+      "question": "Was passiert mit Referenzen auf nicht existierende Quellen?",
+      "expected_in_citation": "CitationMapper"
+    },
+    {
+      "question": "Wo laeuft das Backend als Docker-Container?",
+      "expected_in_citation": "Railway"
+    },
+    {
+      "question": "Welche Schritte hat die Ingest-Pipeline?",
+      "expected_in_citation": "Extraktion, Chunking, Embedding und Speicherung"
+    },
+    {
+      "question": "Fuer wen wurde das System als Testprojekt entwickelt?",
+      "expected_in_citation": "Everlast"
+    },
+    {
+      "question": "Wo liegen die API-Schluessel?",
+      "expected_in_citation": "server-seitig"
+    }
+  ],
+  "unanswerable": [
+    { "question": "Wer gewann die Fussball-Weltmeisterschaft 2014?" },
+    { "question": "Welchen Umsatz erzielte Apple im letzten Quartal?" }
+  ]
+}
