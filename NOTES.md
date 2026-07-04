@@ -53,11 +53,17 @@ Hochgeladene Dokumente sind untrusted Input → **Prompt-Injection-Risiko**. Ma�
    werden ignoriert.
 3. Input-Validierung beim Upload: Dateityp-Whitelist, Größenlimit, leere Dokumente abgelehnt.
 4. Keys nur server-seitig (Env-Variablen), nie im Frontend, `.env` in `.gitignore`.
+5. **Supabase: RLS aktiv auf allen Tabellen, keine Policies** — der anon-Key ist damit
+   vollständig gesperrt (verifiziert: SELECT liefert leere Menge, INSERT → 42501/401).
+   Zugriff ausschließlich server-seitig über den Service-Role-Key im Backend
+   (Railway-Env); das Frontend spricht nie direkt mit Supabase, nur mit der FastAPI.
 
 ## 6 · Produktions-Ausblick
 
-- **EU-Hosting** (Supabase Frankfurt, Azure OpenAI EU-Region) für DSGVO
-- **Supabase RLS + Auth** für Multi-User
+- **EU-Hosting**: Supabase läuft bereits in Frankfurt; offen: Pinecone-EU-Region und
+  Azure OpenAI EU für die volle DSGVO-Story
+- **RLS: umgesetzt** (aktiv auf allen Tabellen, anon gesperrt, nur Service-Role
+  server-seitig — siehe §5). Offen für Multi-User: Supabase **Auth** + per-User-Policies
 - **Monitoring:** in Produktion Langfuse für Kosten-/Qualitäts-Tracking der LLM-Calls
   (im Code: simples Token/Kosten-Logging pro Call, siehe `providers/llm.py`)
 - Word-Support (weiterer `TextExtractor`), mehrere Notebooks pro User
