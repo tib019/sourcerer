@@ -55,16 +55,22 @@ class DocumentIngestor:
         vectors = self._embedder.embed([chunk.text for chunk in chunks])
         self._store.upsert(chunks, vectors, namespace=notebook_id)
 
-        self._repository.add_document(
-            DocumentMeta(
-                id=document_id,
-                notebook_id=notebook_id,
-                name=filename,
-                media_type=media_type,
-                page_count=len(pages),
-                chunk_count=len(chunks),
+        try:
+            self._repository.add_document(
+                DocumentMeta(
+                    id=document_id,
+                    notebook_id=notebook_id,
+                    name=filename,
+                    media_type=media_type,
+                    page_count=len(pages),
+                    chunk_count=len(chunks),
+                )
             )
-        )
+            self._repository.add_chunks(chunks)
+        except Exception:
+            # Metadaten fehlgeschlagen → bereits upserted Vektoren wären Orphans.
+            self._store.delete_document(document_id, namespace=notebook_id)
+            raise
         return IngestResult(
             document_id=document_id,
             document_name=filename,

@@ -31,6 +31,8 @@ class Settings:
     pinecone_index: str = field(
         default_factory=lambda: os.environ.get("PINECONE_INDEX", "sourcerer")
     )
+    supabase_url: str = field(default_factory=lambda: os.environ.get("SUPABASE_URL", ""))
+    supabase_key: str = field(default_factory=lambda: os.environ.get("SUPABASE_KEY", ""))
     chunk_size: int = field(
         default_factory=lambda: int(os.environ.get("SOURCERER_CHUNK_SIZE", "800"))
     )
@@ -69,6 +71,8 @@ class Settings:
                 for name, value in (
                     ("OPENAI_API_KEY", self.openai_api_key),
                     ("PINECONE_API_KEY", self.pinecone_api_key),
+                    ("SUPABASE_URL", self.supabase_url),
+                    ("SUPABASE_KEY", self.supabase_key),
                 )
                 if not value
             ]

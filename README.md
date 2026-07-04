@@ -25,8 +25,8 @@ Quellen** — mit klickbaren Zitaten, die auf die Original-Textstelle zeigen.
 |---|---|---|
 | Frontend | Next.js / TypeScript / Tailwind (Vercel) | erprobter Stack |
 | Backend / RAG-Kern | Python / FastAPI (Railway, Docker) | RAG-Logik dort, wo die Tiefe liegt |
-| Vektor-DB | Pinecone (Interface: austauschbar) | Produktionserfahrung |
-| Dokumente & Metadaten | Supabase (Storage + Postgres) | erprobt, DSGVO-Story |
+| Vektor-DB | Pinecone (Interface: austauschbar; fake-Modus: In-Memory) | Produktionserfahrung |
+| Notebook-/Dokument-Metadaten | Supabase Postgres (openai-Modus; fake-Modus: In-Memory) | persistent über Neustarts, EU-Region |
 | LLM | OpenAI GPT-4o + text-embedding-3-small, hinter Provider-Interface | BYOM-ready |
 | CI/CD | GitHub Actions | Regression bei jedem Push |
 
@@ -81,8 +81,9 @@ uvicorn app.main:app --reload --port 8000
 ```
 
 Ohne API-Keys startet das Backend mit **deterministischen Fake-Providern**
-(`SOURCERER_PROVIDERS=fake`) — der komplette Flow inkl. Zitaten funktioniert offline.
-Mit `SOURCERER_PROVIDERS=openai` + Keys laufen OpenAI + Pinecone.
+(`SOURCERER_PROVIDERS=fake`) — der komplette Flow inkl. Zitaten funktioniert offline,
+Metadaten liegen dann in-memory. Mit `SOURCERER_PROVIDERS=openai` + Keys laufen
+OpenAI + Pinecone + Supabase (Notebooks/Dokumente überleben Neustarts).
 
 ### Frontend
 

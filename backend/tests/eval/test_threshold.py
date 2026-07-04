@@ -47,6 +47,9 @@ class _FixedScoreStore(VectorStore):
     def delete_document(self, document_id, namespace):  # pragma: no cover
         raise NotImplementedError
 
+    def delete_namespace(self, namespace):  # pragma: no cover - nicht gebraucht
+        raise NotImplementedError
+
 
 class _SpyLLM(LLMProvider):
     def __init__(self) -> None:

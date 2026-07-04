@@ -30,7 +30,7 @@ from app.rag.citations import CitationMapper
 from app.rag.pipeline import RAGPipeline
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
-from app.repository import InMemoryNotebookRepository
+from app.repository import InMemoryNotebookRepository, NotebookRepository
 
 logging.basicConfig(level=logging.INFO)
 
@@ -85,18 +85,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     settings = settings or Settings()
     settings.validate()
 
+    repository: NotebookRepository
     if settings.providers == "openai":
+        from app.repository_supabase import (
+            SupabaseNotebookRepository,
+            create_supabase_client,
+        )
+
         embedder = OpenAIEmbeddings(api_key=settings.openai_api_key)
         store = PineconeStore(
             api_key=settings.pinecone_api_key, index_name=settings.pinecone_index
         )
         llm = OpenAIChat(api_key=settings.openai_api_key)
+        repository = SupabaseNotebookRepository(
+            create_supabase_client(settings.supabase_url, settings.supabase_key)
+        )
     else:
         embedder = FakeEmbeddings()
         store = InMemoryVectorStore()
         llm = FakeLLM()
-
-    repository = InMemoryNotebookRepository()
+        repository = InMemoryNotebookRepository()
     ingestor = DocumentIngestor(
         extractors={MEDIA_TYPE_PDF: PdfExtractor(), MEDIA_TYPE_TEXT: PlainTextExtractor()},
         chunker=Chunker(chunk_size=settings.chunk_size, overlap=settings.chunk_overlap),
@@ -141,6 +149,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return [
             NotebookResponse(id=n.id, name=n.name) for n in repository.list_notebooks()
         ]
+
+    @app.delete("/notebooks/{notebook_id}", status_code=204)
+    def delete_notebook(notebook_id: str) -> None:
+        repository.delete_notebook(notebook_id)
+        # Vektor-Seite miträumen — sonst bleiben Orphans im Namespace (2d).
+        store.delete_namespace(notebook_id)
 
     @app.post(
         "/notebooks/{notebook_id}/documents",

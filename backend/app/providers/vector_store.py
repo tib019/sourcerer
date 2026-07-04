@@ -33,6 +33,10 @@ class VectorStore(ABC):
     @abstractmethod
     def delete_document(self, document_id: str, namespace: str) -> None: ...
 
+    @abstractmethod
+    def delete_namespace(self, namespace: str) -> None:
+        """Alle Vektoren eines Notebooks entfernen — Gegenstück zu delete_notebook."""
+
 
 class InMemoryVectorStore(VectorStore):
     """Exakte Cosine-Suche im Speicher — Tests, CI und Offline-Demo."""
@@ -60,6 +64,9 @@ class InMemoryVectorStore(VectorStore):
     def delete_document(self, document_id: str, namespace: str) -> None:
         bucket = self._data.get(namespace, [])
         bucket[:] = [(v, c) for v, c in bucket if c.document_id != document_id]
+
+    def delete_namespace(self, namespace: str) -> None:
+        self._data.pop(namespace, None)
 
 
 class PineconeStore(VectorStore):
@@ -112,3 +119,6 @@ class PineconeStore(VectorStore):
 
     def delete_document(self, document_id: str, namespace: str) -> None:
         self._index.delete(filter={"document_id": document_id}, namespace=namespace)
+
+    def delete_namespace(self, namespace: str) -> None:
+        self._index.delete(delete_all=True, namespace=namespace)
