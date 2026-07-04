@@ -50,6 +50,22 @@ def test_no_answer_yields_no_citations():
     assert answer.citations == []
 
 
+def test_no_answer_detection_is_anchored_not_substring():
+    """Teilantwort, die den Sentinel-Satz ENTHÄLT, darf nicht kollabieren (2c)."""
+    # Enthält den Sentinel WÖRTLICH — ein Substring-Check würde hier kollabieren.
+    partial = f"Zur Chunk-Größe: {NO_ANSWER} Zum Overlap aber: er beträgt 15 Prozent [2]."
+    answer = CitationMapper().map(partial, _chunks(2))
+    assert answer.text != NO_ANSWER
+    assert "15 Prozent" in answer.text
+    assert [c.n for c in answer.citations] == [2]
+
+
+def test_no_answer_with_quotes_and_whitespace_still_collapses():
+    answer = CitationMapper().map(f'  "{NO_ANSWER}"  ', _chunks(2))
+    assert answer.text == NO_ANSWER
+    assert answer.citations == []
+
+
 def test_answer_without_references():
     answer = CitationMapper().map("Text ohne Marker.", _chunks(2))
     assert answer.citations == []

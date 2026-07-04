@@ -13,10 +13,24 @@ from app.providers.llm import NO_ANSWER
 
 _MARKER = re.compile(r"\[(\d+)\]")
 
+# Zeichen, die Modelle gern um den Sentinel legen (Quotes, Punkt, Whitespace).
+_SENTINEL_TRIM = " \t\r\n\"'„“”«»‚‘’."
+
+
+def _is_no_answer(answer_text: str) -> bool:
+    """True nur, wenn die Antwort der NO_ANSWER-Sentinel IST (verankert, nicht Substring).
+
+    Teilantworten wie "Zu X steht nichts in den Quellen, aber zu Y: …" enthalten den
+    Satz zwar, SIND aber eine Antwort — sie müssen erhalten bleiben. Zitat-Marker um
+    den Sentinel herum ([1]) sind widersprüchlich und zählen nicht als Inhalt.
+    """
+    normalized = _MARKER.sub("", answer_text).strip(_SENTINEL_TRIM)
+    return normalized == NO_ANSWER.strip(_SENTINEL_TRIM)
+
 
 class CitationMapper:
     def map(self, answer_text: str, chunks: list[ScoredChunk]) -> ChatAnswer:
-        if NO_ANSWER in answer_text:
+        if _is_no_answer(answer_text):
             return ChatAnswer(text=NO_ANSWER, citations=[])
 
         valid = range(1, len(chunks) + 1)
