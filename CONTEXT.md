@@ -12,16 +12,10 @@
 **Aufgabe (wörtlich):** „Baue einen NotebookLM-Klon (https://notebooklm.google.com). Umsetzung, Umfang
 und Struktur sind komplett Dir überlassen. Die Nutzung von AI-Tools ist ausdrücklich erwünscht."
 
-**Abgabe:** Ergebnis als Antwort auf die E-Mail + Loom-Video ODER Agent-Session (eines reicht — wir liefern
-den narrierten Loom, Agent-Session optional als Bonus).
-
-**Was wirklich getestet wird:** Nicht ob KI benutzt wird — sondern ob mit Kontrolle, Verständnis und
-Urteilsvermögen. Jede Entscheidung muss im Nachgespräch verteidigbar sein. Der Reviewer-Kontext:
-Everlast baut mit CorporateLLM selbst ein RAG-Produkt (Antworten mit Quellenzitaten). Die Aufgabe ist
-faktisch eine Mini-Version ihrer eigenen Kern-Engine.
+**Abgabe:** Repo + Live-Demo als Antwort auf die E-Mail.
 
 **Projektname:** `Sourcerer` (Repo: `sourcerer`) — Source + Sorcerer: der Quellen-Magier.
-Pitch-Satz fürs Loom: „Der Sourcerer zaubert nicht — er belegt. Keine Antwort ohne Quelle."
+Leitsatz: „Der Sourcerer zaubert nicht — er belegt. Keine Antwort ohne Quelle."
 
 ---
 
@@ -37,9 +31,8 @@ Pitch-Satz fürs Loom: „Der Sourcerer zaubert nicht — er belegt. Keine Antwo
 
 ### Stretch (nur wenn MVP steht, in dieser Reihenfolge)
 1. **Auto-Zusammenfassung / Study-Guide** pro Notebook (NotebookLM-Signature-Feature)
-2. **Audio-Overview** (Zusammenfassung → TTS, ein Play-Button) — Differenzierer: berührt Everlasts
-   VoiceAI-Kern; CorporateLLM selbst hat kein Voice
-3. Mehrere Notebooks („Spaces"-Analogie zu CorporateLLM)
+2. **Audio-Overview** (Zusammenfassung → TTS, ein Play-Button)
+3. Mehrere Notebooks
 
 ### Bewusst NICHT im Scope (in NOTES.md dokumentieren!)
 - Kein LangChain / Agent-Framework — für RAG reicht eine explizite, lesbare Pipeline
@@ -60,7 +53,7 @@ Pitch-Satz fürs Loom: „Der Sourcerer zaubert nicht — er belegt. Keine Antwo
 | Frontend | **Next.js / TypeScript / Tailwind** auf **Vercel** | erprobter Stack (tattootimeV2, healing-humans) |
 | Backend / RAG-Kern | **Python / FastAPI** auf **Railway**, **Docker-Container** | Python = stärkste Sprache; RAG-Logik dort, wo die Tiefe liegt |
 | Vektor-DB | **Pinecone** | identisch zur produktiven healing-humans-Pipeline — Produktionserfahrung |
-| Dokumente & Metadaten | **Supabase** (Storage + Postgres) | erprobt; DSGVO-Story (CorporateLLM fährt selbst Supabase Frankfurt) |
+| Dokumente & Metadaten | **Supabase** (Storage + Postgres) | erprobt; DSGVO-tauglich (EU-Region) |
 | LLM | **OpenAI** (GPT-4o + text-embedding-3-small), hinter Provider-Interface | Produktionserfahrung; Interface macht BYOM möglich |
 | CI/CD | **GitHub Actions**: Lint → Tests → Deploy | täglicher Workflow; Regression bei jedem Push |
 | TTS (Stretch) | OpenAI TTS | ein API-Call, kein neues System |
@@ -90,8 +83,7 @@ RAGPipeline             # orchestriert Query → Retrieve → Prompt → Answer
 
 Begründung (ADR-007): Testbarkeit (jede Klasse einzeln per Unit-Test, Provider mockbar via DI),
 Austauschbarkeit (Pinecone→pgvector, OpenAI→BYOM = eine neue Klasse, kein Umbau) — und bewusster
-Kontrast zum „KI-Default" (prozeduraler Einweg-Skriptcode). Im Loom explizit zeigen: Klassendiagramm
-neben Code.
+Kontrast zum „KI-Default" (prozeduraler Einweg-Skriptcode).
 
 **Sicherheit (NOTES.md-Pflichtabsatz):** Hochgeladene Dokumente sind untrusted Input →
 Prompt-Injection-Risiko. Maßnahmen: Quellen-Text klar vom System-Prompt getrennt (delimitiert),
@@ -100,7 +92,7 @@ Keys nur server-seitig.
 
 ---
 
-## 4 · Teststrategie (Signatur-Stärke — wie beim IHK-Projekt, nur größer)
+## 4 · Teststrategie
 
 | Ebene | Tool | Was konkret getestet wird |
 |---|---|---|
@@ -112,7 +104,7 @@ Keys nur server-seitig.
 | **Regression** | GitHub Actions | kompletter Testlauf bei jedem Push — CI rot = kein Merge |
 
 **Regel:** Tests entstehen MIT dem Feature, nicht am Ende. Der RAG-Kern (Chunking/Retrieval/Zitate)
-wird zuerst getestet — das ist der Teil, auf den Everlast schaut.
+wird zuerst getestet.
 
 ---
 
@@ -122,7 +114,7 @@ Format je ADR: Kontext → Entscheidung → Alternativen → Konsequenzen (kurz,
 
 1. **ADR-001:** Getrenntes TS-Frontend + Python-RAG-Service statt Next.js-Monolith
 2. **ADR-002:** Pinecone statt pgvector (Produktionserfahrung; pgvector als erwogene Alternative
-   dokumentieren — CorporateLLM-Style)
+   dokumentieren)
 3. **ADR-003:** Explizite RAG-Pipeline statt LangChain/Framework
 4. **ADR-004:** Chunking-Strategie (Größe, Overlap, warum)
 5. **ADR-005:** Zitat-Format ([n]-Referenzen mit Chunk-Metadaten statt Freitext-Quellenangabe)
@@ -144,14 +136,14 @@ Format je ADR: Kontext → Entscheidung → Alternativen → Konsequenzen (kurz,
 | D6 | **Deployment-Diagramm** | `docs/deployment.md` | Vercel, Railway(Docker), Pinecone, Supabase, GitHub Actions CI/CD-Fluss |
 
 Regel: Diagramme entstehen VOR bzw. WÄHREND der Umsetzung (D1, D2, D5 vor dem ersten Code —
-sie sind Teil der Planung), nicht als Nachdeko. Im Loom werden D1–D3 gezeigt.
+sie sind Teil der Planung), nicht als Nachdeko.
 
 ---
 
-## 6 · Repo-Struktur & Doku (Stil = ArgoTicketTool-README)
+## 6 · Repo-Struktur & Doku
 
 ```
-notebook-forge/
+sourcerer/
   frontend/            # Next.js/TS (Vercel)
   backend/             # FastAPI (Railway, Docker)
     app/
@@ -174,7 +166,7 @@ notebook-forge/
   CONTEXT.md           # diese Datei — wandert MIT ins Repo (zeigt die Arbeitsweise!)
 ```
 
-**README-Pflichtteile** (wie ArgoTicketTool): Badges · Beschreibung · Features · Tech-Stack-Tabelle ·
+**README-Pflichtteile:** Badges · Beschreibung · Features · Tech-Stack-Tabelle ·
 Projektstruktur · Installation/Setup · Verwendung · **Tests** (mit Befehlen) · **Sicherheit** ·
 Live-Demo-Links · Autor.
 
@@ -189,45 +181,24 @@ Live-Demo-Links · Autor.
 
 ---
 
-## 7 · Arbeitsweise in der Build-Session (fürs Recording sichtbar)
+## 7 · Arbeitsweise in der Build-Session
 
 1. **Docs first:** vor jeder neuen Lib kurz die Doku prüfen (Next.js-Version im Repo beachten!)
 2. **Kleine, saubere Commits** (Conventional Commits: `feat:`, `test:`, `docs:`) — die Git-History
-   wird mitgelesen und erzählt den Prozess
-3. **Agent Loop sichtbar leben:** Aufgabe aus CONTEXT.md geben → Ergebnis prüfen → korrigieren →
-   committen. Korrekturen AUSSPRECHEN (im Loom): „hier hat die KI X gemacht, ich wollte Y, weil…"
+   erzählt den Prozess
+3. **Agent Loop:** Aufgabe aus CONTEXT.md geben → Ergebnis prüfen → korrigieren → committen.
+   Korrekturen werden in NOTES.md §2 dokumentiert.
 4. **Kein Feature ohne Test** im RAG-Kern
 5. Reihenfolge: Backend-RAG-Kern (+ Tests) → Frontend-Flow → E2E → Deploy → Stretch → Doku-Politur
    (Doku parallel, nicht am Ende)
 
 ---
 
-## 8 · Loom-Drehbuch (5–10 Min, nach dem Build aufnehmen)
-
-1. **(30 s) Ergebnis zuerst:** Live-Demo — Dokument hochladen, Frage stellen, zitierte Antwort,
-   Zitat-Klick. „Deployed auf Vercel + Railway, Link in der Mail."
-2. **(2 Min) Architektur:** Diagramm zeigen. Warum getrennter Python-Service, warum Pinecone
-   (healing-humans-Produktionserfahrung), warum kein Framework. Beiläufig: „Supabase u. a. deshalb,
-   weil ihr in CorporateLLM selbst Supabase Frankfurt fahrt — und als Azure-Engineer liegt mir euer
-   Azure-OpenAI-Backend ohnehin."
-3. **(2 Min) Arbeitsweise = Agent Loop:** „Meine CONTEXT.md ist mein Agent-Harness — Scope und
-   Entscheidungen stabil über die ganze Session. Ich delegiere Ausführung, reviewe jedes Ergebnis,
-   korrigiere." 1 konkretes Beispiel zeigen, wo die KI übersteuert wurde.
-4. **(2 Min) Qualität:** Teststrategie zeigen — besonders Groundedness-Eval („Frage ohne Quelle →
-   System halluziniert nicht") und die deterministischen Retrieval-Tests. CI grün zeigen.
-5. **(1 Min) Ehrliche Grenzen + Ausblick:** was ich mit mehr Zeit bauen würde (Auth/RLS, Langfuse,
-   Word-Support, Mehr-Notebooks). Kein Overselling.
-
----
-
-## 9 · Definition of Done / Abgabe-Checkliste
+## 8 · Definition of Done
 
 - [ ] Live-Demo erreichbar (Vercel-URL + Railway-Backend healthy)
 - [ ] Kern-Flow fehlerfrei: Upload → Frage → zitierte Antwort → Zitat-Klick
 - [ ] Alle Tests grün in CI (Badge im README)
-- [ ] README + NOTES.md + 6 ADRs + architecture.md vollständig
+- [ ] README + NOTES.md + ADRs + Diagramme vollständig
 - [ ] CONTEXT.md im Repo
-- [ ] Loom aufgenommen (Drehbuch §8), Ton geprüft, ruhig gesprochen (Pausen > Tempo)
-- [ ] Antwort-Mail an bewerbungen@everlastkarriere.de: 3–4 Sätze, Links (Repo, Live-Demo, Loom),
-      1 Satz zur Arbeitsweise, Dank + Ausblick aufs Gespräch
-- [ ] Repo public ODER Zugriff für Everlast geklärt
+- [ ] Repo public ODER Zugriff geklärt
