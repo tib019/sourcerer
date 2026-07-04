@@ -42,6 +42,13 @@ test("Upload → Frage → zitierte Antwort → Zitat-Klick zeigt Quelle", async
   await expect(detail).toContainText("berge.txt");
   await expect(detail).toContainText("Seite 1");
   await expect(detail).toContainText("Der Mount Everest ist 8849 Meter hoch.");
+
+  // Audio-Overview (Phase 3): Button → Player mit Summary erscheint
+  await page.getByTestId("audio-overview-button").click();
+  const player = page.getByTestId("audio-overview-player");
+  await expect(player).toBeVisible();
+  await expect(player).toContainText("Mount Everest");
+  await expect(player.locator("audio")).toHaveAttribute("src", /^blob:/);
 });
 
 test("Frage ohne Quellengrundlage → ehrliches 'steht nicht in den Quellen'", async ({

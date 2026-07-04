@@ -18,6 +18,8 @@ Quellen** — mit klickbaren Zitaten, die auf die Original-Textstelle zeigen.
 - **Ehrliches „Weiß ich nicht":** Steht die Antwort nicht in den Quellen, sagt das System das —
   statt zu halluzinieren (per Test abgesichert, siehe [Groundedness-Eval](backend/tests/eval/))
 - **Notebook-Konzept:** Quellen sind pro Notebook isoliert
+- **Audio-Overview:** Ein Klick fasst alle Quellen zusammen und liest sie vor
+  (LLM-Summary → TTS, [ADR-008](docs/adr/ADR-008-audio-overview-tts.md))
 
 ## Tech-Stack
 

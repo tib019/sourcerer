@@ -6,6 +6,11 @@ import { SourcesPanel } from "@/components/SourcesPanel";
 import * as api from "@/lib/api";
 import type { ChatMessage, Citation, DocumentInfo, Notebook } from "@/lib/types";
 
+function toAudioUrl(base64: string, mediaType: string): string {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+  return URL.createObjectURL(new Blob([bytes], { type: mediaType }));
+}
+
 export default function Home() {
   const [notebook, setNotebook] = useState<Notebook | null>(null);
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
@@ -14,6 +19,8 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [audio, setAudio] = useState<{ url: string; summary: string } | null>(null);
+  const [audioLoading, setAudioLoading] = useState(false);
 
   // Demo-Scope: ein Notebook, beim ersten Laden angelegt bzw. wiederverwendet.
   useEffect(() => {
@@ -81,6 +88,23 @@ export default function Home() {
     }
   };
 
+  const handleAudioOverview = async () => {
+    if (!notebook) return;
+    setAudioLoading(true);
+    setError(null);
+    try {
+      const data = await api.createAudioOverview(notebook.id);
+      setAudio((old) => {
+        if (old) URL.revokeObjectURL(old.url);
+        return { url: toAudioUrl(data.audio_base64, data.media_type), summary: data.summary };
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Audio-Overview fehlgeschlagen");
+    } finally {
+      setAudioLoading(false);
+    }
+  };
+
   return (
     <main className="flex h-screen flex-col">
       <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
@@ -91,10 +115,36 @@ export default function Home() {
             {notebook ? `· ${notebook.name}` : ""}
           </span>
         </div>
-        <p className="hidden text-xs text-slate-400 sm:block">
-          Keine Antwort ohne Quelle.
-        </p>
+        <button
+          onClick={handleAudioOverview}
+          disabled={!notebook || documents.length === 0 || audioLoading}
+          data-testid="audio-overview-button"
+          className="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700
+            hover:bg-indigo-50 disabled:opacity-40"
+        >
+          {audioLoading ? "Erzeuge Audio…" : "🎧 Audio-Overview"}
+        </button>
       </header>
+
+      {audio && (
+        <div
+          className="flex items-center gap-4 border-b border-indigo-200 bg-indigo-50 px-6 py-2"
+          data-testid="audio-overview-player"
+        >
+          <audio controls src={audio.url} className="h-9" />
+          <p className="line-clamp-2 flex-1 text-xs text-indigo-900">{audio.summary}</p>
+          <button
+            aria-label="Audio schließen"
+            onClick={() => {
+              URL.revokeObjectURL(audio.url);
+              setAudio(null);
+            }}
+            className="text-indigo-400 hover:text-indigo-700"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && (
         <div className="border-b border-red-200 bg-red-50 px-6 py-2 text-sm text-red-700">

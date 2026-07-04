@@ -91,6 +91,28 @@ class SupabaseNotebookRepository(NotebookRepository):
             ]
         ).execute()
 
+    def list_chunks(self, notebook_id: str) -> list[Chunk]:
+        # Join über documents: nur Chunks dieses Notebooks, inkl. Dokumentname.
+        response = (
+            self._client.table("chunks")
+            .select("id, document_id, chunk_index, page, text, documents!inner(notebook_id, name)")
+            .eq("documents.notebook_id", notebook_id)
+            .order("document_id")
+            .order("chunk_index")
+            .execute()
+        )
+        return [
+            Chunk(
+                id=row["id"],
+                document_id=row["document_id"],
+                document_name=row["documents"]["name"],
+                chunk_index=row["chunk_index"],
+                page=row["page"],
+                text=row["text"],
+            )
+            for row in response.data
+        ]
+
     def list_documents(self, notebook_id: str) -> list[DocumentMeta]:
         self.get_notebook(notebook_id)
         response = (

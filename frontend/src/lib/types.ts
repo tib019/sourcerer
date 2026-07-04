@@ -25,6 +25,12 @@ export interface ChatResponse {
   citations: Citation[];
 }
 
+export interface AudioOverviewData {
+  summary: string;
+  media_type: string;
+  audio_base64: string;
+}
+
 export interface ChatMessage {
   role: "user" | "assistant";
   text: string;

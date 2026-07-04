@@ -36,6 +36,10 @@ class NotebookRepository(ABC):
     @abstractmethod
     def list_documents(self, notebook_id: str) -> list[DocumentMeta]: ...
 
+    @abstractmethod
+    def list_chunks(self, notebook_id: str) -> list[Chunk]:
+        """Alle Chunks eines Notebooks (Dokument-Reihenfolge, dann chunk_index)."""
+
 
 class InMemoryNotebookRepository(NotebookRepository):
     def __init__(self) -> None:
@@ -77,3 +81,12 @@ class InMemoryNotebookRepository(NotebookRepository):
     def list_documents(self, notebook_id: str) -> list[DocumentMeta]:
         self.get_notebook(notebook_id)
         return list(self._documents[notebook_id])
+
+    def list_chunks(self, notebook_id: str) -> list[Chunk]:
+        return [
+            chunk
+            for document in self.list_documents(notebook_id)
+            for chunk in sorted(
+                self._chunks.get(document.id, []), key=lambda c: c.chunk_index
+            )
+        ]

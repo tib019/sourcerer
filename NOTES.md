@@ -60,4 +60,8 @@ Hochgeladene Dokumente sind untrusted Input → **Prompt-Injection-Risiko**. Ma�
 - **Supabase RLS + Auth** für Multi-User
 - **Monitoring:** in Produktion Langfuse für Kosten-/Qualitäts-Tracking der LLM-Calls
   (im Code: simples Token/Kosten-Logging pro Call, siehe `providers/llm.py`)
-- Word-Support (weiterer `TextExtractor`), mehrere Notebooks pro User, Audio-Overview (TTS)
+- Word-Support (weiterer `TextExtractor`), mehrere Notebooks pro User
+- **Audio-Overview ist umgesetzt** ([ADR-008](docs/adr/ADR-008-audio-overview-tts.md)):
+  Quellen → LLM-Summary → TTS hinter `TTSProvider`-Interface (OpenAI tts-1 / FakeTTS
+  mit generiertem WAV für CI). Produktions-Ausblick: Audio-Caching (gleiche Quellen =
+  gleiche Summary), Streaming statt base64, Stimmen-Auswahl.

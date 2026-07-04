@@ -1,4 +1,4 @@
-import type { ChatResponse, DocumentInfo, Notebook } from "./types";
+import type { AudioOverviewData, ChatResponse, DocumentInfo, Notebook } from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -43,6 +43,10 @@ export function pasteText(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name, text }),
   });
+}
+
+export function createAudioOverview(notebookId: string): Promise<AudioOverviewData> {
+  return request(`/notebooks/${notebookId}/audio-overview`, { method: "POST" });
 }
 
 export function askQuestion(notebookId: string, question: string): Promise<ChatResponse> {

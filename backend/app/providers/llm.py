@@ -82,6 +82,12 @@ class FakeLLM(LLMProvider):
         user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         question_match = _QUESTION_LINE.search(user)
         sources = _SOURCE_BLOCK.findall(user)
+        if sources and not question_match:
+            # Summary-Modus (Audio-Overview): erster Satz jeder Quelle, max. 3.
+            openers = [
+                re.split(r"(?<=[.!?])\s+", text)[0].strip() for _, text in sources[:3]
+            ]
+            return LLMResponse(text=" ".join(openers))
         if not question_match or not sources:
             return LLMResponse(text=NO_ANSWER)
 

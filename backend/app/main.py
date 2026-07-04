@@ -6,6 +6,7 @@ der Kern kennt nur Interfaces (ADR-006/007).
 
 from __future__ import annotations
 
+import base64
 import logging
 
 from fastapi import FastAPI, File, Request, UploadFile
@@ -25,7 +26,9 @@ from app.ingest.extractor import PdfExtractor, PlainTextExtractor
 from app.ingest.ingestor import MEDIA_TYPE_PDF, MEDIA_TYPE_TEXT, DocumentIngestor
 from app.providers.embeddings import FakeEmbeddings, OpenAIEmbeddings
 from app.providers.llm import FakeLLM, OpenAIChat
+from app.providers.tts import FakeTTS, OpenAITTS
 from app.providers.vector_store import InMemoryVectorStore, PineconeStore
+from app.rag.audio_overview import AudioOverviewService
 from app.rag.citations import CitationMapper
 from app.rag.pipeline import RAGPipeline
 from app.rag.prompt_builder import PromptBuilder
@@ -78,6 +81,12 @@ class ChatResponse(BaseModel):
     citations: list[CitationResponse]
 
 
+class AudioOverviewResponse(BaseModel):
+    summary: str
+    media_type: str
+    audio_base64: str
+
+
 # --- Composition Root --------------------------------------------------------
 
 
@@ -97,6 +106,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             api_key=settings.pinecone_api_key, index_name=settings.pinecone_index
         )
         llm = OpenAIChat(api_key=settings.openai_api_key)
+        tts = OpenAITTS(api_key=settings.openai_api_key)
         repository = SupabaseNotebookRepository(
             create_supabase_client(settings.supabase_url, settings.supabase_key)
         )
@@ -104,6 +114,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         embedder = FakeEmbeddings()
         store = InMemoryVectorStore()
         llm = FakeLLM()
+        tts = FakeTTS()
         repository = InMemoryNotebookRepository()
     ingestor = DocumentIngestor(
         extractors={MEDIA_TYPE_PDF: PdfExtractor(), MEDIA_TYPE_TEXT: PlainTextExtractor()},
@@ -113,6 +124,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         repository=repository,
         max_bytes=settings.max_upload_bytes,
     )
+    audio_overview_service = AudioOverviewService(repository=repository, llm=llm, tts=tts)
     pipeline = RAGPipeline(
         retriever=Retriever(
             embedder=embedder,
@@ -212,6 +224,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
             for d in repository.list_documents(notebook_id)
         ]
+
+    @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse)
+    def audio_overview(notebook_id: str) -> AudioOverviewResponse:
+        repository.get_notebook(notebook_id)
+        overview = audio_overview_service.generate(notebook_id)
+        return AudioOverviewResponse(
+            summary=overview.summary,
+            media_type=overview.speech.media_type,
+            audio_base64=base64.b64encode(overview.speech.audio).decode("ascii"),
+        )
 
     @app.post("/notebooks/{notebook_id}/chat", response_model=ChatResponse)
     def chat(notebook_id: str, body: ChatRequest) -> ChatResponse:
