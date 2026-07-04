@@ -7,6 +7,8 @@ import logging
 import math
 from abc import ABC, abstractmethod
 
+from app.providers.text_utils import content_words
+
 logger = logging.getLogger("sourcerer.providers")
 
 
@@ -46,14 +48,16 @@ class OpenAIEmbeddings(EmbeddingProvider):
 
 
 class FakeEmbeddings(EmbeddingProvider):
-    """Deterministisches Hashed-Bag-of-Words-Embedding.
+    """Deterministisches Hashed-Bag-of-Words-Embedding (nur bedeutungstragende Wörter).
 
-    Jedes Wort wird stabil (md5) auf eine Dimension gehasht, gezählt, L2-normalisiert.
-    Texte mit gemeinsamen Wörtern bekommen hohe Cosine-Similarity — Retrieval
-    funktioniert damit offline, reproduzierbar und kostenfrei (Tests, CI, Demo).
+    Jedes Inhaltswort wird stabil (md5) auf eine Dimension gehasht, gezählt,
+    L2-normalisiert. Texte mit gemeinsamen Inhaltswörtern bekommen hohe
+    Cosine-Similarity — Retrieval funktioniert damit offline, reproduzierbar und
+    kostenfrei. Stopwörter werden gefiltert: sie erzeugten messbar Kollisions-
+    Ähnlichkeit zwischen fremden Texten (Kalibrierung, NOTES §2).
     """
 
-    def __init__(self, dimension: int = 64) -> None:
+    def __init__(self, dimension: int = 256) -> None:
         self._dimension = dimension
 
     @property
@@ -65,10 +69,7 @@ class FakeEmbeddings(EmbeddingProvider):
 
     def _embed_one(self, text: str) -> list[float]:
         vector = [0.0] * self._dimension
-        for word in text.lower().split():
-            word = word.strip(".,;:!?()[]{}\"'«»„“”")
-            if not word:
-                continue
+        for word in content_words(text):
             digest = hashlib.md5(word.encode("utf-8")).digest()
             index = int.from_bytes(digest[:4], "big") % self._dimension
             vector[index] += 1.0

@@ -106,7 +106,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_bytes=settings.max_upload_bytes,
     )
     pipeline = RAGPipeline(
-        retriever=Retriever(embedder=embedder, store=store, top_k=settings.top_k),
+        retriever=Retriever(
+            embedder=embedder,
+            store=store,
+            top_k=settings.top_k,
+            min_score=settings.min_score,
+        ),
         prompt_builder=PromptBuilder(),
         llm=llm,
         citation_mapper=CitationMapper(),

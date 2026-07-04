@@ -12,6 +12,8 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from app.providers.text_utils import content_words
+
 logger = logging.getLogger("sourcerer.providers")
 
 NO_ANSWER = "Dazu steht nichts in den Quellen."
@@ -65,19 +67,7 @@ class OpenAIChat(LLMProvider):
 _SOURCE_BLOCK = re.compile(r"\[(\d+)\][^\n]*\n<<<\n(.*?)\n>>>", re.DOTALL)
 _QUESTION_LINE = re.compile(r"^Frage:\s*(.+)$", re.MULTILINE)
 
-_STOPWORDS = frozenset(
-    """der die das den dem des ein eine einer eines und oder ist sind war waren wird werden
-    kann können hat haben in im an am auf aus bei mit von für zu zur zum nach über unter
-    wie was wer wen wem wo wann warum welche welcher welches es er sie man nicht auch nur
-    the a an of is are what who how where when why in on for with and or to
-    heißt heisst gibt steht sagt macht viele mehr sehr dass wenn als
-    """.split()
-)
-
-
-def _content_words(text: str) -> set[str]:
-    words = re.findall(r"[\wäöüÄÖÜß-]+", text.lower())
-    return {w for w in words if len(w) > 2 and w not in _STOPWORDS}
+_content_words = content_words
 
 
 class FakeLLM(LLMProvider):

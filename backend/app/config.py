@@ -10,6 +10,15 @@ def _split_origins(raw: str) -> list[str]:
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
+# Retrieval-Mindest-Score (Cosine), empirisch kalibriert mit
+# scripts/calibrate_min_score.py auf dem Groundedness-Golden-Set (ADR-004):
+# text-embedding-3-small: max(unbeantwortbar)=0.21, min(beantwortbar)=0.39 -> Mitte 0.30.
+OPENAI_MIN_SCORE = 0.30
+# Fake-Provider ist ein deterministischer Test-Stub mit eigener Score-Verteilung —
+# bewusst NICHT kalibriert, nur ein Boden gegen Null-Treffer.
+FAKE_MIN_SCORE = 0.05
+
+
 @dataclass(frozen=True)
 class Settings:
     providers: str = field(
@@ -29,6 +38,11 @@ class Settings:
         default_factory=lambda: int(os.environ.get("SOURCERER_CHUNK_OVERLAP", "120"))
     )
     top_k: int = field(default_factory=lambda: int(os.environ.get("SOURCERER_TOP_K", "6")))
+    min_score_override: float | None = field(
+        default_factory=lambda: (
+            float(raw) if (raw := os.environ.get("SOURCERER_MIN_SCORE")) else None
+        )
+    )
     max_upload_bytes: int = field(
         default_factory=lambda: int(
             os.environ.get("SOURCERER_MAX_UPLOAD_BYTES", str(10 * 1024 * 1024))
@@ -39,6 +53,12 @@ class Settings:
             os.environ.get("SOURCERER_CORS_ORIGINS", "http://localhost:3000")
         )
     )
+
+    @property
+    def min_score(self) -> float:
+        if self.min_score_override is not None:
+            return self.min_score_override
+        return OPENAI_MIN_SCORE if self.providers == "openai" else FAKE_MIN_SCORE
 
     def validate(self) -> None:
         if self.providers not in ("fake", "openai"):

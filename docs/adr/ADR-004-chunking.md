@@ -23,3 +23,21 @@ Schnitt bevorzugt an Satzgrenzen. Seitennummer (PDF) wandert als Metadatum an je
 - Die Overlap-Arithmetik (Startpositionen, Token-Zählung) ist exakt spezifiziert und
   in `tests/math/` deterministisch getestet.
 - Größe/Overlap sind Konstruktor-Parameter des `Chunker` — tuning ohne Codeänderung.
+
+## Nachtrag: Retrieval-Mindest-Score (empirisch kalibriert)
+
+Groundedness hat **zwei Verteidigungslinien**, die zusammenwirken:
+1. **Retrieval-Threshold:** Chunks unter einem Cosine-Mindest-Score gelten nicht als
+   Quelle. Liefert das Retrieval nichts über dem Threshold, antwortet das System
+   „steht nicht in den Quellen", **ohne das LLM überhaupt aufzurufen** (ehrlich + spart
+   Kosten).
+2. **Prompt-Instruktion:** Auch mit Treffern über dem Threshold darf das LLM nur aus
+   den Quellen antworten — für Fälle, in denen thematisch ähnliche Chunks die konkrete
+   Frage trotzdem nicht beantworten.
+
+Der Threshold wurde **gemessen, nicht geraten** (`scripts/calibrate_min_score.py`,
+Golden-Set aus `tests/eval/`): text-embedding-3-small trennt sauber —
+max(unbeantwortbar) = 0.21, min(beantwortbar) = 0.39 → **min_score = 0.30** (Mitte,
+Marge beidseitig). Der Fake-Test-Stub hat eine eigene, unkalibrierte Score-Verteilung
+und deshalb einen eigenen festen Wert (0.05, nur Boden gegen Null-Treffer); beide
+Werte stehen in `app/config.py`, Override per Env-Variable `SOURCERER_MIN_SCORE`.
