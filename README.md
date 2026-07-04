@@ -7,6 +7,25 @@ Quellen** — mit klickbaren Zitaten, die auf die Original-Textstelle zeigen.
 
 ![CI](https://github.com/tib019/sourcerer/actions/workflows/ci.yml/badge.svg)
 
+### Demo
+
+<!-- TODO: Demo-GIF hier einsetzen (Upload → Frage → zitierte Antwort → Zitat-Klick) -->
+_Demo-GIF folgt._
+
+### Quickstart offline (keine API-Keys nötig)
+
+```bash
+# Backend (Terminal 1)
+cd backend && python -m venv .venv && .venv\Scripts\pip install -r requirements.txt
+set SOURCERER_PROVIDERS=fake && .venv\Scripts\python -m uvicorn app.main:app --port 8000
+
+# Frontend (Terminal 2)
+cd frontend && npm install && npm run dev     # → http://localhost:3000
+```
+
+Der komplette Flow (Upload → zitierte Antwort → Zitat-Klick → Audio-Overview) läuft
+dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
+
 ---
 
 ## Features
