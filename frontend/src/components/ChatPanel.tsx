@@ -11,6 +11,7 @@ export function ChatPanel({
   activeCitation,
   busy,
   hasSources,
+  suggestedQuestions,
 }: {
   messages: ChatMessage[];
   onAsk: (question: string) => void;
@@ -18,6 +19,7 @@ export function ChatPanel({
   activeCitation: Citation | null;
   busy: boolean;
   hasSources: boolean;
+  suggestedQuestions: string[];
 }) {
   const [question, setQuestion] = useState("");
   const bottom = useRef<HTMLDivElement>(null);
@@ -76,6 +78,25 @@ export function ChatPanel({
         )}
         <div ref={bottom} />
       </div>
+
+      {hasSources && messages.length === 0 && suggestedQuestions.length > 0 && (
+        <div
+          className="flex flex-wrap gap-2 border-t border-slate-100 bg-white px-4 pt-3"
+          data-testid="suggested-questions"
+        >
+          {suggestedQuestions.map((question, i) => (
+            <button
+              key={i}
+              onClick={() => onAsk(question)}
+              disabled={busy}
+              className="rounded-full border border-indigo-200 bg-indigo-50 px-3 py-1.5
+                text-xs text-indigo-800 hover:bg-indigo-100 disabled:opacity-50"
+            >
+              {question}
+            </button>
+          ))}
+        </div>
+      )}
 
       <form
         className="border-t border-slate-200 bg-white p-4"

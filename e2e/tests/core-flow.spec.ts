@@ -43,8 +43,9 @@ test("Upload → Frage → zitierte Antwort → Zitat-Klick zeigt Quelle", async
   await expect(detail).toContainText("Seite 1");
   await expect(detail).toContainText("Der Mount Everest ist 8849 Meter hoch.");
 
-  // Audio-Overview (Phase 3): Button → Player mit Summary erscheint
-  await page.getByTestId("audio-overview-button").click();
+  // Audio-Overview (Phase 3, im Studio-Panel): Tab → Generieren → Player
+  await page.getByTestId("studio-tab-audio").click();
+  await page.getByTestId("studio-generate-audio").click();
   const player = page.getByTestId("audio-overview-player");
   await expect(player).toBeVisible();
   await expect(player).toContainText("Mount Everest");

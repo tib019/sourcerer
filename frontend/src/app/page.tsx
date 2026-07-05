@@ -3,13 +3,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { ChatPanel } from "@/components/ChatPanel";
 import { SourcesPanel } from "@/components/SourcesPanel";
+import { StudioPanel } from "@/components/StudioPanel";
 import * as api from "@/lib/api";
 import type { ChatMessage, Citation, DocumentInfo, Notebook } from "@/lib/types";
-
-function toAudioUrl(base64: string, mediaType: string): string {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  return URL.createObjectURL(new Blob([bytes], { type: mediaType }));
-}
 
 export default function Home() {
   const [notebooks, setNotebooks] = useState<Notebook[]>([]);
@@ -20,16 +16,12 @@ export default function Home() {
   const [uploading, setUploading] = useState(false);
   const [asking, setAsking] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [audio, setAudio] = useState<{ url: string; summary: string } | null>(null);
-  const [audioLoading, setAudioLoading] = useState(false);
+  const [suggested, setSuggested] = useState<string[]>([]);
 
   const clearConversation = useCallback(() => {
     setMessages([]);
     setActiveCitation(null);
-    setAudio((old) => {
-      if (old) URL.revokeObjectURL(old.url);
-      return null;
-    });
+    setSuggested([]);
   }, []);
 
   const activateNotebook = useCallback(
@@ -62,6 +54,23 @@ export default function Home() {
   const refreshDocuments = useCallback(async (notebookId: string) => {
     setDocuments(await api.listDocuments(notebookId));
   }, []);
+
+  // Startfragen: nach Upload bzw. bei leerem Chat einmal pro Quellen-Stand laden.
+  useEffect(() => {
+    if (!notebook || documents.length === 0 || messages.length > 0) return;
+    let cancelled = false;
+    api
+      .suggestedQuestions(notebook.id)
+      .then((data) => {
+        if (!cancelled) setSuggested(data.questions);
+      })
+      .catch(() => {
+        if (!cancelled) setSuggested([]); // Chips sind nice-to-have, kein Fehlerbanner
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [notebook, documents, messages.length]);
 
   const run = async (action: () => Promise<void>) => {
     setError(null);
@@ -104,19 +113,6 @@ export default function Home() {
       ]);
     });
     setAsking(false);
-  };
-
-  const handleAudioOverview = async () => {
-    if (!notebook) return;
-    setAudioLoading(true);
-    await run(async () => {
-      const data = await api.createAudioOverview(notebook.id);
-      setAudio((old) => {
-        if (old) URL.revokeObjectURL(old.url);
-        return { url: toAudioUrl(data.audio_base64, data.media_type), summary: data.summary };
-      });
-    });
-    setAudioLoading(false);
   };
 
   const handleDeleteDocument = async (doc: DocumentInfo) => {
@@ -216,37 +212,8 @@ export default function Home() {
           >
             🗑
           </button>
-          <button
-            onClick={handleAudioOverview}
-            disabled={!notebook || documents.length === 0 || audioLoading}
-            data-testid="audio-overview-button"
-            className="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700
-              hover:bg-indigo-50 disabled:opacity-40"
-          >
-            {audioLoading ? "Erzeuge Audio…" : "🎧 Audio-Overview"}
-          </button>
         </div>
       </header>
-
-      {audio && (
-        <div
-          className="flex items-center gap-4 border-b border-indigo-200 bg-indigo-50 px-6 py-2"
-          data-testid="audio-overview-player"
-        >
-          <audio controls src={audio.url} className="h-9" />
-          <p className="line-clamp-2 flex-1 text-xs text-indigo-900">{audio.summary}</p>
-          <button
-            aria-label="Audio schließen"
-            onClick={() => {
-              URL.revokeObjectURL(audio.url);
-              setAudio(null);
-            }}
-            className="text-indigo-400 hover:text-indigo-700"
-          >
-            ✕
-          </button>
-        </div>
-      )}
 
       {error && (
         <div className="border-b border-red-200 bg-red-50 px-6 py-2 text-sm text-red-700">
@@ -271,6 +238,13 @@ export default function Home() {
           activeCitation={activeCitation}
           busy={asking}
           hasSources={documents.length > 0}
+          suggestedQuestions={suggested}
+        />
+        <StudioPanel
+          notebookId={notebook?.id ?? null}
+          hasSources={documents.length > 0}
+          onCitationClick={setActiveCitation}
+          activeCitation={activeCitation}
         />
       </div>
     </main>

@@ -1,4 +1,12 @@
-import type { AudioOverviewData, ChatResponse, DocumentInfo, Notebook } from "./types";
+import type {
+  AudioOverviewData,
+  ChatResponse,
+  DocumentInfo,
+  FlashcardsData,
+  Notebook,
+  QuizData,
+  ReportData,
+} from "./types";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
@@ -47,6 +55,22 @@ export function pasteText(
 
 export function createAudioOverview(notebookId: string): Promise<AudioOverviewData> {
   return request(`/notebooks/${notebookId}/audio-overview`, { method: "POST" });
+}
+
+export function suggestedQuestions(notebookId: string): Promise<{ questions: string[] }> {
+  return request(`/notebooks/${notebookId}/suggested-questions`, { method: "POST" });
+}
+
+export function generateReport(notebookId: string): Promise<ReportData> {
+  return request(`/notebooks/${notebookId}/report`, { method: "POST" });
+}
+
+export function generateFlashcards(notebookId: string): Promise<FlashcardsData> {
+  return request(`/notebooks/${notebookId}/flashcards`, { method: "POST" });
+}
+
+export function generateQuiz(notebookId: string): Promise<QuizData> {
+  return request(`/notebooks/${notebookId}/quiz`, { method: "POST" });
 }
 
 async function requestVoid(path: string, init?: RequestInit): Promise<void> {

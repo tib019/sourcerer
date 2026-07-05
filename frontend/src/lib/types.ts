@@ -36,3 +36,42 @@ export interface ChatMessage {
   text: string;
   citations: Citation[];
 }
+
+// Studio: StudioSource ist strukturgleich zu Citation — Zitat-Chips
+// funktionieren in Chat und Studio identisch.
+export type StudioSource = Citation;
+
+export interface ReportSection {
+  heading: string;
+  content: string;
+  citations: number[];
+}
+
+export interface ReportData {
+  title: string;
+  sections: ReportSection[];
+  sources: StudioSource[];
+}
+
+export interface Flashcard {
+  front: string;
+  back: string;
+  citation: number | null;
+}
+
+export interface FlashcardsData {
+  cards: Flashcard[];
+  sources: StudioSource[];
+}
+
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer_index: number;
+  citation: number | null;
+}
+
+export interface QuizData {
+  questions: QuizQuestion[];
+  sources: StudioSource[];
+}
