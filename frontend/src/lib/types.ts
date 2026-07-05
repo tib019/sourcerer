@@ -9,6 +9,7 @@ export interface DocumentInfo {
   media_type: string;
   page_count: number;
   chunk_count: number;
+  source_url?: string | null;
 }
 
 export interface Citation {

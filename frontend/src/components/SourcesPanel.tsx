@@ -9,6 +9,7 @@ export function SourcesPanel({
   activeCitation,
   onUploadFile,
   onPasteText,
+  onImportUrl,
   onDeleteDocument,
   onCloseCitation,
   busy,
@@ -17,12 +18,16 @@ export function SourcesPanel({
   activeCitation: Citation | null;
   onUploadFile: (file: File) => void;
   onPasteText: (name: string, text: string) => void;
+  onImportUrl: (url: string) => void;
   onDeleteDocument: (doc: DocumentInfo) => void;
   onCloseCitation: () => void;
   busy: boolean;
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const [showPaste, setShowPaste] = useState(false);
+  const [showUrl, setShowUrl] = useState(false);
+  const [urlValue, setUrlValue] = useState("");
+  const [urlError, setUrlError] = useState<string | null>(null);
   const [pasteName, setPasteName] = useState("");
   const [pasteText, setPasteText] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
@@ -43,14 +48,66 @@ export function SourcesPanel({
             {busy ? "Verarbeite…" : "Datei hochladen"}
           </button>
           <button
-            onClick={() => setShowPaste((v) => !v)}
+            onClick={() => {
+              setShowPaste((v) => !v);
+              setShowUrl(false);
+            }}
             disabled={busy}
             className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50
               disabled:opacity-50"
           >
             Text
           </button>
+          <button
+            onClick={() => {
+              setShowUrl((v) => !v);
+              setShowPaste(false);
+            }}
+            disabled={busy}
+            data-testid="url-import-toggle"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm hover:bg-slate-50
+              disabled:opacity-50"
+          >
+            Website
+          </button>
         </div>
+        {showUrl && (
+          <form
+            className="mt-3 space-y-2"
+            onSubmit={(e) => {
+              e.preventDefault();
+              const url = urlValue.trim();
+              if (!/^https?:\/\/.+/.test(url)) {
+                setUrlError("Bitte eine vollständige http(s)-URL angeben.");
+                return;
+              }
+              onImportUrl(url);
+              setUrlValue("");
+              setUrlError(null);
+              setShowUrl(false);
+            }}
+          >
+            <input
+              value={urlValue}
+              onChange={(e) => setUrlValue(e.target.value)}
+              placeholder="https://…"
+              data-testid="url-input"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            {urlError && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+                {urlError}
+              </p>
+            )}
+            <button
+              type="submit"
+              className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white
+                hover:bg-slate-700"
+            >
+              Website importieren
+            </button>
+          </form>
+        )}
         <input
           ref={fileInput}
           type="file"
@@ -127,12 +184,23 @@ export function SourcesPanel({
               activeCitation?.document_id === doc.id ? "bg-indigo-50" : ""
             }`}
           >
-            <div>
+            <div className="min-w-0">
               <p className="font-medium text-slate-800">{doc.name}</p>
               <p className="text-xs text-slate-500">
                 {doc.page_count} Seite{doc.page_count === 1 ? "" : "n"} ·{" "}
                 {doc.chunk_count} Chunks
               </p>
+              {doc.source_url && (
+                <a
+                  href={doc.source_url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block truncate text-xs text-indigo-500 hover:underline"
+                  title={doc.source_url}
+                >
+                  {doc.source_url}
+                </a>
+              )}
             </div>
             <button
               onClick={() => onDeleteDocument(doc)}

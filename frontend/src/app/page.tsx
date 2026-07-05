@@ -101,6 +101,16 @@ export default function Home() {
     setUploading(false);
   };
 
+  const handleImportUrl = async (url: string) => {
+    if (!notebook) return;
+    setUploading(true);
+    await run(async () => {
+      await api.importUrl(notebook.id, url);
+      await refreshDocuments(notebook.id);
+    });
+    setUploading(false);
+  };
+
   const handleAsk = async (question: string) => {
     if (!notebook) return;
     setMessages((m) => [...m, { role: "user", text: question, citations: [] }]);
@@ -227,6 +237,7 @@ export default function Home() {
           activeCitation={activeCitation}
           onUploadFile={handleUpload}
           onPasteText={handlePaste}
+          onImportUrl={handleImportUrl}
           onDeleteDocument={handleDeleteDocument}
           onCloseCitation={() => setActiveCitation(null)}
           busy={uploading || !notebook}

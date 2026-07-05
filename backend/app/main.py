@@ -22,10 +22,13 @@ from app.errors import (
     GenerationError,
     NotebookNotFoundError,
     UnsupportedFileTypeError,
+    UrlFetchFailedError,
+    UrlNotAllowedError,
 )
 from app.ingest.chunker import Chunker
 from app.ingest.extractor import PdfExtractor, PlainTextExtractor
 from app.ingest.ingestor import MEDIA_TYPE_PDF, MEDIA_TYPE_TEXT, DocumentIngestor
+from app.ingest.url_fetcher import WebPageFetcher
 from app.providers.embeddings import FakeEmbeddings, OpenAIEmbeddings
 from app.providers.llm import FakeLLM, OpenAIChat
 from app.providers.tts import FakeTTS, OpenAITTS
@@ -71,6 +74,11 @@ class DocumentResponse(BaseModel):
     media_type: str
     page_count: int
     chunk_count: int
+    source_url: str | None = None
+
+
+class ImportUrlRequest(BaseModel):
+    url: str = Field(min_length=1, max_length=2000)
 
 
 class ChatRequest(BaseModel):
@@ -100,9 +108,13 @@ class AudioOverviewResponse(BaseModel):
 # --- Composition Root --------------------------------------------------------
 
 
-def create_app(settings: Settings | None = None) -> FastAPI:
+def create_app(
+    settings: Settings | None = None,
+    url_fetcher: WebPageFetcher | None = None,
+) -> FastAPI:
     settings = settings or Settings()
     settings.validate()
+    url_fetcher = url_fetcher or WebPageFetcher()
 
     repository: NotebookRepository
     if settings.providers == "openai":
@@ -221,6 +233,30 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             chunk_count=result.chunk_count,
         )
 
+    @app.post(
+        "/notebooks/{notebook_id}/documents/url",
+        response_model=DocumentResponse,
+        status_code=201,
+    )
+    def import_url(notebook_id: str, body: ImportUrlRequest) -> DocumentResponse:
+        repository.get_notebook(notebook_id)
+        page = url_fetcher.fetch(body.url)  # wirft UrlNotAllowed/UrlFetchFailed (ADR-009)
+        result = ingestor.ingest(
+            page.text.encode("utf-8"),
+            filename=page.title,
+            media_type=MEDIA_TYPE_TEXT,
+            notebook_id=notebook_id,
+            source_url=page.url,
+        )
+        return DocumentResponse(
+            id=result.document_id,
+            name=result.document_name,
+            media_type=MEDIA_TYPE_TEXT,
+            page_count=result.page_count,
+            chunk_count=result.chunk_count,
+            source_url=page.url,
+        )
+
     @app.get(
         "/notebooks/{notebook_id}/documents", response_model=list[DocumentResponse]
     )
@@ -232,6 +268,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 media_type=d.media_type,
                 page_count=d.page_count,
                 chunk_count=d.chunk_count,
+                source_url=d.source_url,
             )
             for d in repository.list_documents(notebook_id)
         ]
@@ -322,6 +359,8 @@ def _register_error_handlers(app: FastAPI) -> None:
         (NotebookNotFoundError, 404),
         (DocumentNotFoundError, 404),
         (GenerationError, 502),
+        (UrlNotAllowedError, 400),
+        (UrlFetchFailedError, 422),
     ):
 
         def handler(

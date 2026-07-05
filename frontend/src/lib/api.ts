@@ -100,6 +100,14 @@ export function deleteNotebook(notebookId: string): Promise<void> {
   return requestVoid(`/notebooks/${notebookId}`, { method: "DELETE" });
 }
 
+export function importUrl(notebookId: string, url: string): Promise<DocumentInfo> {
+  return request(`/notebooks/${notebookId}/documents/url`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ url }),
+  });
+}
+
 export function askQuestion(notebookId: string, question: string): Promise<ChatResponse> {
   return request(`/notebooks/${notebookId}/chat`, {
     method: "POST",

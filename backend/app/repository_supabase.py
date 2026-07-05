@@ -72,6 +72,8 @@ class SupabaseNotebookRepository(NotebookRepository):
                 "media_type": document.media_type,
                 "page_count": document.page_count,
                 "chunk_count": document.chunk_count,
+                # storage_path traegt die Herkunfts-URL (ER-Diagramm D5) — keine Migration noetig
+                "storage_path": document.source_url,
             }
         ).execute()
 
@@ -136,7 +138,7 @@ class SupabaseNotebookRepository(NotebookRepository):
         self.get_notebook(notebook_id)
         response = (
             self._client.table("documents")
-            .select("id, notebook_id, name, media_type, page_count, chunk_count")
+            .select("id, notebook_id, name, media_type, page_count, chunk_count, storage_path")
             .eq("notebook_id", notebook_id)
             .order("created_at")
             .execute()
@@ -149,6 +151,7 @@ class SupabaseNotebookRepository(NotebookRepository):
                 media_type=row["media_type"],
                 page_count=row["page_count"],
                 chunk_count=row["chunk_count"],
+                source_url=row.get("storage_path"),
             )
             for row in response.data
         ]

@@ -25,5 +25,13 @@ class GenerationError(SourcererError):
     """LLM lieferte kein verwertbares strukturiertes Ergebnis (Studio-Generatoren)."""
 
 
+class UrlNotAllowedError(SourcererError):
+    """URL abgelehnt: Schema nicht http/https oder Ziel im privaten/internen Netz (SSRF)."""
+
+
+class UrlFetchFailedError(SourcererError):
+    """URL-Abruf gescheitert: HTTP-Fehler, falscher Content-Type oder zu groß."""
+
+
 class DocumentNotFoundError(SourcererError):
     """Unbekannte Dokument-ID (oder Dokument gehört zu einem anderen Notebook)."""

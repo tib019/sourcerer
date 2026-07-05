@@ -74,6 +74,7 @@ class DocumentMeta:
     media_type: str
     page_count: int
     chunk_count: int
+    source_url: str | None = None  # gesetzt bei URL-Import (Herkunfts-Metadatum)
 
 
 @dataclass(frozen=True)

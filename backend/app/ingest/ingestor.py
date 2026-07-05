@@ -32,7 +32,13 @@ class DocumentIngestor:
         self._max_bytes = max_bytes
 
     def ingest(
-        self, data: bytes, *, filename: str, media_type: str, notebook_id: str
+        self,
+        data: bytes,
+        *,
+        filename: str,
+        media_type: str,
+        notebook_id: str,
+        source_url: str | None = None,
     ) -> IngestResult:
         self._repository.get_notebook(notebook_id)  # wirft NotebookNotFoundError
 
@@ -64,6 +70,7 @@ class DocumentIngestor:
                     media_type=media_type,
                     page_count=len(pages),
                     chunk_count=len(chunks),
+                    source_url=source_url,
                 )
             )
             self._repository.add_chunks(chunks)
