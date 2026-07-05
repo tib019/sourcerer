@@ -19,6 +19,7 @@ from app.errors import (
     DocumentNotFoundError,
     EmptyDocumentError,
     FileTooLargeError,
+    GenerationError,
     NotebookNotFoundError,
     UnsupportedFileTypeError,
 )
@@ -34,6 +35,13 @@ from app.rag.citations import CitationMapper
 from app.rag.pipeline import RAGPipeline
 from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
+from app.rag.studio import (
+    FlashcardsResult,
+    QuizResult,
+    ReportResult,
+    StudioService,
+    SuggestedQuestionsResult,
+)
 from app.repository import InMemoryNotebookRepository, NotebookRepository
 
 logging.basicConfig(level=logging.INFO)
@@ -126,6 +134,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         max_bytes=settings.max_upload_bytes,
     )
     audio_overview_service = AudioOverviewService(repository=repository, llm=llm, tts=tts)
+    studio = StudioService(repository=repository, llm=llm)
     pipeline = RAGPipeline(
         retriever=Retriever(
             embedder=embedder,
@@ -245,6 +254,29 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         store.delete_namespace(notebook_id)
         repository.reset_notebook(notebook_id)
 
+    @app.post(
+        "/notebooks/{notebook_id}/suggested-questions",
+        response_model=SuggestedQuestionsResult,
+    )
+    def suggested_questions(notebook_id: str) -> SuggestedQuestionsResult:
+        repository.get_notebook(notebook_id)
+        return studio.suggested_questions(notebook_id)
+
+    @app.post("/notebooks/{notebook_id}/report", response_model=ReportResult)
+    def report(notebook_id: str) -> ReportResult:
+        repository.get_notebook(notebook_id)
+        return studio.report(notebook_id)
+
+    @app.post("/notebooks/{notebook_id}/flashcards", response_model=FlashcardsResult)
+    def flashcards(notebook_id: str) -> FlashcardsResult:
+        repository.get_notebook(notebook_id)
+        return studio.flashcards(notebook_id)
+
+    @app.post("/notebooks/{notebook_id}/quiz", response_model=QuizResult)
+    def quiz(notebook_id: str) -> QuizResult:
+        repository.get_notebook(notebook_id)
+        return studio.quiz(notebook_id)
+
     @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse)
     def audio_overview(notebook_id: str) -> AudioOverviewResponse:
         repository.get_notebook(notebook_id)
@@ -283,6 +315,7 @@ def _register_error_handlers(app: FastAPI) -> None:
         (EmptyDocumentError, 422),
         (NotebookNotFoundError, 404),
         (DocumentNotFoundError, 404),
+        (GenerationError, 502),
     ):
 
         def handler(

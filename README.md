@@ -39,6 +39,10 @@ dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
 - **Notebook-Konzept:** Quellen sind pro Notebook isoliert
 - **Audio-Overview:** Ein Klick fasst alle Quellen zusammen und liest sie vor
   (LLM-Summary → TTS, [ADR-008](docs/adr/ADR-008-audio-overview-tts.md))
+- **Studio (alles gegroundet, mit klickbaren Zitaten):** vorgeschlagene Startfragen,
+  zitierter Bericht, Karteikarten (Flip-Cards) und Multiple-Choice-Quiz — jeweils
+  ausschließlich aus den Quellen des Notebooks generiert (strukturierte,
+  Schema-validierte JSON-Outputs)
 
 ## Tech-Stack
 

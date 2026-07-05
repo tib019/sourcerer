@@ -70,6 +70,65 @@ _QUESTION_LINE = re.compile(r"^Frage:\s*(.+)$", re.MULTILINE)
 _content_words = content_words
 
 
+def _studio_json(task: str, sources: list[tuple[str, str]]) -> str:
+    """Deterministische Studio-Outputs aus den Quellen-Blöcken (Fake-Modus).
+
+    Kein Sprachmodell: erste Sätze der Quellen werden zu Fragen/Karten/Quiz
+    verarbeitet — genug, um JSON-Schema, Zitat-Validierung und UI end-to-end
+    zu testen. Fragen enthalten Wörter der Quelle, damit ein Klick auf einen
+    Startfragen-Chip im Fake-Chat auch eine belegte Antwort findet.
+    """
+    import json as _json
+
+    sentences: list[tuple[int, str]] = []  # (quellen_nummer, satz)
+    for number, text in sources:
+        for sentence in re.split(r"(?<=[.!?])\s+", text):
+            sentence = sentence.strip()
+            if sentence:
+                sentences.append((int(number), sentence))
+
+    def cycle(count: int) -> list[tuple[int, str]]:
+        return [sentences[i % len(sentences)] for i in range(count)]
+
+    if task == "suggested_questions":
+        questions = [
+            f"Worum geht es bei: {' '.join(s.split()[:4])}?" for _, s in cycle(3)
+        ]
+        return _json.dumps({"questions": questions})
+
+    if task == "report":
+        seen: dict[int, str] = {}
+        for n, s in sentences:
+            seen.setdefault(n, s)
+        result_sections = [
+            {"heading": f"Abschnitt {n}", "content": s, "citations": [n]}
+            for n, s in list(seen.items())[:6]
+        ]
+        return _json.dumps({"title": "Bericht über die Quellen", "sections": result_sections})
+
+    if task == "flashcards":
+        cards = [
+            {"front": f"Karte {i + 1}: Was besagt Quelle [{n}]?", "back": s, "citation": n}
+            for i, (n, s) in enumerate(cycle(8))
+        ]
+        return _json.dumps({"cards": cards})
+
+    if task == "quiz":
+        questions = [
+            {
+                "question": f"Welche Aussage stammt aus Quelle [{n}]?",
+                "options": [s, "Erfundene Aussage A.", "Erfundene Aussage B.",
+                            "Erfundene Aussage C."],
+                "answer_index": 0,
+                "citation": n,
+            }
+            for n, s in cycle(4)
+        ]
+        return _json.dumps({"questions": questions})
+
+    return _json.dumps({})
+
+
 class FakeLLM(LLMProvider):
     """Deterministische Antwort aus den Quellen-Blöcken des Prompts.
 
@@ -79,9 +138,15 @@ class FakeLLM(LLMProvider):
     """
 
     def complete(self, messages: list[dict[str, str]]) -> LLMResponse:
+        system = next((m["content"] for m in messages if m["role"] == "system"), "")
         user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
         question_match = _QUESTION_LINE.search(user)
         sources = _SOURCE_BLOCK.findall(user)
+
+        task_match = re.match(r"AUFGABE:\s*(\w+)", system)
+        if task_match and sources:
+            return LLMResponse(text=_studio_json(task_match.group(1), sources))
+
         if sources and not question_match:
             # Summary-Modus (Audio-Overview): erster Satz jeder Quelle, max. 3.
             openers = [

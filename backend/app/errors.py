@@ -21,5 +21,9 @@ class NotebookNotFoundError(SourcererError):
     """Unbekannte Notebook-ID."""
 
 
+class GenerationError(SourcererError):
+    """LLM lieferte kein verwertbares strukturiertes Ergebnis (Studio-Generatoren)."""
+
+
 class DocumentNotFoundError(SourcererError):
     """Unbekannte Dokument-ID (oder Dokument gehört zu einem anderen Notebook)."""
