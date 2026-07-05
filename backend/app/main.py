@@ -160,7 +160,12 @@ def create_app(
         citation_mapper=CitationMapper(),
     )
 
-    app = FastAPI(title="Sourcerer", version="0.1.0")
+    app = FastAPI(
+        title="Sourcerer",
+        version="0.1.0",
+        description="Grounded RAG mit klickbaren Zitaten — keine Antwort ohne "
+        "Quelle. Vollständige Referenz: docs/api-reference.md im Repo.",
+    )
     app.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -170,22 +175,25 @@ def create_app(
 
     _register_error_handlers(app)
 
-    @app.get("/health")
+    @app.get("/health", summary="Health-Check inkl. aktivem Provider-Modus")
     def health() -> dict[str, str]:
         return {"status": "ok", "providers": settings.providers}
 
-    @app.post("/notebooks", response_model=NotebookResponse, status_code=201)
+    @app.post("/notebooks", response_model=NotebookResponse, status_code=201,
+              summary="Notebook anlegen")
     def create_notebook(body: CreateNotebookRequest) -> NotebookResponse:
         notebook = repository.create_notebook(body.name)
         return NotebookResponse(id=notebook.id, name=notebook.name)
 
-    @app.get("/notebooks", response_model=list[NotebookResponse])
+    @app.get("/notebooks", response_model=list[NotebookResponse],
+             summary="Alle Notebooks auflisten")
     def list_notebooks() -> list[NotebookResponse]:
         return [
             NotebookResponse(id=n.id, name=n.name) for n in repository.list_notebooks()
         ]
 
-    @app.delete("/notebooks/{notebook_id}", status_code=204)
+    @app.delete("/notebooks/{notebook_id}", status_code=204,
+                summary="Notebook löschen (Metadaten + Vektor-Namespace)")
     def delete_notebook(notebook_id: str) -> None:
         repository.delete_notebook(notebook_id)
         # Vektor-Seite miträumen — sonst bleiben Orphans im Namespace (2d).
@@ -195,6 +203,7 @@ def create_app(
         "/notebooks/{notebook_id}/documents",
         response_model=DocumentResponse,
         status_code=201,
+        summary="Datei-Upload (PDF/TXT/MD)",
     )
     async def upload_document(notebook_id: str, file: UploadFile = File(...)) -> DocumentResponse:
         data = await file.read()
@@ -217,6 +226,7 @@ def create_app(
         "/notebooks/{notebook_id}/documents/text",
         response_model=DocumentResponse,
         status_code=201,
+        summary="Text als Quelle einfügen",
     )
     def paste_text(notebook_id: str, body: PasteTextRequest) -> DocumentResponse:
         result = ingestor.ingest(
@@ -237,6 +247,9 @@ def create_app(
         "/notebooks/{notebook_id}/documents/url",
         response_model=DocumentResponse,
         status_code=201,
+        summary="Website importieren (SSRF-gehärtet)",
+        description="Nur http/https, interne Ziele geblockt, max. 5 MB, "
+        "nur text/html oder text/plain (ADR-009).",
     )
     def import_url(notebook_id: str, body: ImportUrlRequest) -> DocumentResponse:
         repository.get_notebook(notebook_id)
@@ -258,7 +271,8 @@ def create_app(
         )
 
     @app.get(
-        "/notebooks/{notebook_id}/documents", response_model=list[DocumentResponse]
+        "/notebooks/{notebook_id}/documents", response_model=list[DocumentResponse],
+        summary="Quellen eines Notebooks auflisten"
     )
     def list_documents(notebook_id: str) -> list[DocumentResponse]:
         return [
@@ -273,7 +287,10 @@ def create_app(
             for d in repository.list_documents(notebook_id)
         ]
 
-    @app.delete("/notebooks/{notebook_id}/documents/{document_id}", status_code=204)
+    @app.delete("/notebooks/{notebook_id}/documents/{document_id}", status_code=204,
+                summary="Einzelne Quelle löschen",
+                description="Entfernt Vektoren NUR dieses Dokuments (Namespace "
+                "bleibt) und danach die Metadaten (Chunks via FK CASCADE).")
     def delete_document(notebook_id: str, document_id: str) -> None:
         repository.get_notebook(notebook_id)
         # Existenz VOR dem Vektor-Löschen prüfen (404 statt stiller Teil-Löschung) …
@@ -286,7 +303,8 @@ def create_app(
         store.delete_document(document_id, namespace=notebook_id)
         repository.delete_document(notebook_id, document_id)
 
-    @app.post("/notebooks/{notebook_id}/reset", status_code=204)
+    @app.post("/notebooks/{notebook_id}/reset", status_code=204,
+              summary="Notebook leeren, aber behalten")
     def reset_notebook(notebook_id: str) -> None:
         repository.get_notebook(notebook_id)
         store.delete_namespace(notebook_id)
@@ -295,32 +313,38 @@ def create_app(
     @app.post(
         "/notebooks/{notebook_id}/suggested-questions",
         response_model=SuggestedQuestionsResult,
+        summary="3-4 Einstiegsfragen aus den Quellen",
     )
     def suggested_questions(notebook_id: str) -> SuggestedQuestionsResult:
         repository.get_notebook(notebook_id)
         return studio.suggested_questions(notebook_id)
 
-    @app.post("/notebooks/{notebook_id}/report", response_model=ReportResult)
+    @app.post("/notebooks/{notebook_id}/report", response_model=ReportResult,
+              summary="Zitierter Bericht über alle Quellen")
     def report(notebook_id: str) -> ReportResult:
         repository.get_notebook(notebook_id)
         return studio.report(notebook_id)
 
-    @app.post("/notebooks/{notebook_id}/flashcards", response_model=FlashcardsResult)
+    @app.post("/notebooks/{notebook_id}/flashcards", response_model=FlashcardsResult,
+              summary="8-12 Karteikarten aus den Quellen")
     def flashcards(notebook_id: str) -> FlashcardsResult:
         repository.get_notebook(notebook_id)
         return studio.flashcards(notebook_id)
 
-    @app.post("/notebooks/{notebook_id}/quiz", response_model=QuizResult)
+    @app.post("/notebooks/{notebook_id}/quiz", response_model=QuizResult,
+              summary="Multiple-Choice-Quiz aus den Quellen")
     def quiz(notebook_id: str) -> QuizResult:
         repository.get_notebook(notebook_id)
         return studio.quiz(notebook_id)
 
-    @app.post("/notebooks/{notebook_id}/mindmap", response_model=MindmapResult)
+    @app.post("/notebooks/{notebook_id}/mindmap", response_model=MindmapResult,
+              summary="Mindmap (Mermaid, serverseitig bereinigt)")
     def mindmap(notebook_id: str) -> MindmapResult:
         repository.get_notebook(notebook_id)
         return studio.mindmap(notebook_id)
 
-    @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse)
+    @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse,
+              summary="Quellen-Zusammenfassung als Audio (TTS)")
     def audio_overview(notebook_id: str) -> AudioOverviewResponse:
         repository.get_notebook(notebook_id)
         overview = audio_overview_service.generate(notebook_id)
@@ -330,7 +354,11 @@ def create_app(
             audio_base64=base64.b64encode(overview.speech.audio).decode("ascii"),
         )
 
-    @app.post("/notebooks/{notebook_id}/chat", response_model=ChatResponse)
+    @app.post("/notebooks/{notebook_id}/chat", response_model=ChatResponse,
+              summary="Grounded Chat",
+              description="Antwortet ausschließlich aus den Quellen des Notebooks, "
+              "mit [n]-Zitaten. Ohne belastbare Quelle: 'Dazu steht nichts "
+              "in den Quellen.'")
     def chat(notebook_id: str, body: ChatRequest) -> ChatResponse:
         repository.get_notebook(notebook_id)
         answer = pipeline.answer(body.question, notebook_id)

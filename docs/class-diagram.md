@@ -73,6 +73,35 @@ classDiagram
         +map(answer_text, chunks) ChatAnswer
     }
 
+    class StudioService {
+        -repository: NotebookRepository
+        -llm: LLMProvider
+        +suggested_questions(notebook_id)
+        +report(notebook_id)
+        +flashcards(notebook_id)
+        +quiz(notebook_id)
+        +mindmap(notebook_id)
+    }
+
+    class AudioOverviewService {
+        -repository: NotebookRepository
+        -llm: LLMProvider
+        -tts: TTSProvider
+        +generate(notebook_id) AudioOverview
+    }
+
+    class TTSProvider {
+        <<abstract>>
+        +synthesize(text) Speech
+    }
+    class OpenAITTS
+    class FakeTTS
+
+    class WebPageFetcher {
+        -timeout, max_bytes
+        +fetch(url) FetchedPage
+    }
+
     TextExtractor <|-- PdfExtractor
     TextExtractor <|-- PlainTextExtractor
     EmbeddingProvider <|-- OpenAIEmbeddings
@@ -94,6 +123,12 @@ classDiagram
 
     Retriever o-- EmbeddingProvider
     Retriever o-- VectorStore
+
+    TTSProvider <|-- OpenAITTS
+    TTSProvider <|-- FakeTTS
+    StudioService o-- LLMProvider
+    AudioOverviewService o-- LLMProvider
+    AudioOverviewService o-- TTSProvider
 ```
 
 Alle Abhängigkeiten werden per Konstruktor injiziert; die Komposition passiert an genau

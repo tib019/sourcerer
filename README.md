@@ -30,7 +30,9 @@ dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
 
 ## Features
 
-- **Quellen-Upload:** PDF und Plaintext (Datei oder Paste)
+- **Quellen-Upload:** PDF, Plaintext (Datei oder Paste, mit Validierung) und
+  **Website-Import** — SSRF-gehärtet: interne Ziele geblockt, Größen-/Typ-Limits
+  ([ADR-009](docs/adr/ADR-009-url-import-ssrf.md))
 - **Ingest-Pipeline:** Extraktion → Chunking (mit Overlap) → Embeddings → Vektor-Store
 - **Grounded Chat:** Antworten nur aus den hochgeladenen Quellen, mit `[n]`-Zitaten
 - **Klickbare Zitate:** Jedes Zitat zeigt Dokument, Seite und die Original-Textstelle
@@ -42,9 +44,10 @@ dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
 - **Audio-Overview:** Ein Klick fasst alle Quellen zusammen und liest sie vor
   (LLM-Summary → TTS, [ADR-008](docs/adr/ADR-008-audio-overview-tts.md))
 - **Studio (alles gegroundet, mit klickbaren Zitaten):** vorgeschlagene Startfragen,
-  zitierter Bericht, Karteikarten (Flip-Cards) und Multiple-Choice-Quiz — jeweils
-  ausschließlich aus den Quellen des Notebooks generiert (strukturierte,
-  Schema-validierte JSON-Outputs)
+  zitierter Bericht, Karteikarten (Flip-Cards), Multiple-Choice-Quiz und **Mindmap**
+  (Server baut den Mermaid-Text aus bereinigten Labels, Client rendert mit hartem
+  Fallback — [ADR-010](docs/adr/ADR-010-mindmap-fallback.md)) — jeweils ausschließlich
+  aus den Quellen des Notebooks (strukturierte, Schema-validierte JSON-Outputs)
 
 ## Tech-Stack
 
@@ -126,13 +129,25 @@ npm run dev                    # erwartet Backend auf http://localhost:8000
 | Endpoint | Zweck |
 |---|---|
 | `POST /notebooks` · `GET /notebooks` · `DELETE /notebooks/{id}` | Notebooks verwalten |
-| `POST /notebooks/{id}/documents` (Datei) · `…/documents/text` (Paste) | Quellen ingestieren |
+| `POST /notebooks/{id}/documents` (Datei) · `…/documents/text` (Paste) · `…/documents/url` (Website, SSRF-gehärtet) | Quellen ingestieren |
 | `DELETE /notebooks/{id}/documents/{doc_id}` · `POST /notebooks/{id}/reset` | Quellen entfernen (räumt Vektoren + Metadaten) |
 | `POST /notebooks/{id}/chat` | Grounded Chat mit `[n]`-Zitaten |
-| `POST /notebooks/{id}/suggested-questions` · `/report` · `/flashcards` · `/quiz` | Studio-Generatoren (JSON, zitiert) |
+| `POST /notebooks/{id}/suggested-questions` · `/report` · `/flashcards` · `/quiz` · `/mindmap` | Studio-Generatoren (JSON, zitiert) |
 | `POST /notebooks/{id}/audio-overview` | Quellen-Summary als Sprache |
 
-Interaktive Doku: `/docs` (FastAPI/OpenAPI) auf dem laufenden Backend.
+Vollständige Referenz mit Request/Response-Formen und Fehlercodes:
+[docs/api-reference.md](docs/api-reference.md) · interaktiv: `/docs` (Swagger) auf dem Backend.
+
+## Dokumentation
+
+| Dokument | Inhalt |
+|---|---|
+| [docs/architecture.md](docs/architecture.md) | Komponenten + Datenfluss (D1) |
+| [docs/api-reference.md](docs/api-reference.md) | alle Endpoints, Schemas, Fehlercodes |
+| [docs/setup.md](docs/setup.md) | lokal starten (fake/openai), Env-Tabelle, Layout |
+| [docs/operations.md](docs/operations.md) | Railway/Vercel-Betrieb, Datenhaltung, Secrets-Regeln |
+| [docs/testing.md](docs/testing.md) | Teststrategie, Golden-Set-Eval, CI |
+| [docs/adr/](docs/adr/README.md) | alle 10 Architecture Decision Records |
 
 ## Tests
 
@@ -144,7 +159,8 @@ Interaktive Doku: `/docs` (FastAPI/OpenAPI) auf dem laufenden Backend.
 | Unit (TS) | `cd frontend && npm test` | Zitat-Parsing/-Rendering, API-Client |
 | E2E | `cd e2e && npx playwright test` | Upload → Frage → zitierte Antwort → Zitat-Klick · Quellen löschen · Notebook-Isolation · Studio |
 
-Alle Ebenen laufen in CI bei jedem Push (aktuell 97 pytest + 11 Vitest + 9 Playwright).
+Alle Ebenen laufen in CI bei jedem Push (aktuell 123 pytest + 20 Vitest + 10 Playwright).
+Details: [docs/testing.md](docs/testing.md)
 
 ## Sicherheit
 

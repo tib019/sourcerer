@@ -41,6 +41,22 @@ Zusätzlich: **Fake-Provider-Modus** (`SOURCERER_PROVIDERS=fake`) — determinis
 Embedding/LLM/Store-Implementierungen hinter denselben Interfaces. Dadurch laufen Unit-,
 Mathe- und E2E-Tests komplett offline und reproduzierbar in CI, ohne API-Kosten und ohne Flakes.
 
+## 3b · Tier-B-Features (additiv, Kern unangetastet)
+
+- **Text-Quelle:** nutzt den bestehenden `documents/text`-Endpoint; das Frontend
+  validiert (nicht leer, 100k-Zeichen-Limit) mit klarer Meldung statt Backend-Roundtrip.
+- **Mindmap:** LLM liefert einen JSON-Baum, der Server baut den Mermaid-Text aus
+  Whitelist-bereinigten Labels (Knoten-Cap 25); der Client rendert mit hartem
+  Fallback (Liste statt Crash) — [ADR-010](docs/adr/ADR-010-mindmap-fallback.md).
+- **URL-Import:** `WebPageFetcher` mit SSRF-Härtung (Schema-Whitelist, IP-Blocklisten
+  nach DNS-Auflösung, Redirect-Re-Check, 10-s-Timeout, 5-MB-Stream-Cap,
+  Content-Type-Whitelist, Extraktion mit Boilerplate-Entfernung) —
+  [ADR-009](docs/adr/ADR-009-url-import-ssrf.md). Bekannte Restlücke (Demo-Scope):
+  DNS-Rebinding; Produktions-Fix im ADR beschrieben. Die Herkunfts-URL wird als
+  Quell-Metadatum gespeichert (vorhandene `storage_path`-Spalte, keine Migration).
+- Alle drei Wege laufen durch den **normalen** Ingest-/Grounding-Pfad und scheitern
+  graceful (Fehlerzustand im UI, nie ein Seiten-Crash).
+
 ## 4 · Bewusst weggelassen + warum
 
 - **Kein LangChain / Agent-Framework** — für RAG reicht eine explizite, lesbare Pipeline.
