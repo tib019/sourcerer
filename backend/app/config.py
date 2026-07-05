@@ -10,10 +10,13 @@ def _split_origins(raw: str) -> list[str]:
     return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 
-# Retrieval-Mindest-Score (Cosine), empirisch kalibriert mit
-# scripts/calibrate_min_score.py auf dem Groundedness-Golden-Set (ADR-004):
-# text-embedding-3-small: max(unbeantwortbar)=0.21, min(beantwortbar)=0.39 -> Mitte 0.30.
-OPENAI_MIN_SCORE = 0.30
+# Retrieval-Mindest-Score (Cosine) — NUR ein Rausch-Floor, kein Relevanz-Urteil.
+# Empirie (scripts/calibrate_min_score.py + Produktions-Incident, ADR-004):
+# Toy-Golden-Set trennte sauber (0.21 vs 0.39 -> 0.30), aber echte Kurz-Queries
+# brachen das: in-source "Ideologie" top1=0.12, "Stufe 1" (cross-lingual)=0.21,
+# waehrend out-of-source Fragen bis 0.21 scoren. KEIN Skalarwert trennt beides ->
+# Threshold filtert nur noch Rauschen, Groundedness entscheidet der Prompt (LLM).
+OPENAI_MIN_SCORE = 0.05
 # Fake-Provider ist ein deterministischer Test-Stub mit eigener Score-Verteilung —
 # bewusst NICHT kalibriert, nur ein Boden gegen Null-Treffer.
 FAKE_MIN_SCORE = 0.05

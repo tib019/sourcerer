@@ -21,6 +21,15 @@ Die Git-History erzählt den Prozess (Conventional Commits, Docs vor Code, Tests
   - **Lint als Review-Instanz:** ruff meldete `zip()` ohne `strict` im Vektor-Code —
     bei ungleich langen chunk/vector-Listen wäre stumm gekürzt worden. Auf `strict=True`
     gesetzt: Längen-Mismatch ist jetzt ein lauter Fehler statt Datenverlust.
+  - **Kalibrierung gegen Toy-Daten schlug in Produktion fehl:** Der Retrieval-Threshold
+    (0.30) war empirisch kalibriert — aber gegen ein zu einfaches Golden-Set. Echte
+    Kurz-Queries („Ideologie", 0.12) und Cross-Language-Fragen („Stufe 1" vs. „Stage 1",
+    0.21) fielen durch → fälschliches „steht nicht in den Quellen". Zweite Messung gegen
+    den Live-Index bewies: kein Skalarwert trennt kurze In-Source- von Out-of-Source-
+    Fragen. Fix: Threshold zum Rausch-Floor degradiert (0.05), Groundedness entscheidet
+    der Prompt — der zugleich Synthese/Definitionsfragen explizit erlauben musste
+    (GPT-4o lehnte sonst selbst mit 5 passenden Chunks ab). Details: ADR-004 Nachtrag.
+    Lehre: Eval-Daten müssen echtes Nutzerverhalten abbilden, nicht das Testdesign.
 
 ## 3 · Eigene Design-Entscheidungen
 
