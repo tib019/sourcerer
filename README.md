@@ -139,8 +139,8 @@ Details: [NOTES.md](NOTES.md) · [ADR-005](docs/adr/ADR-005-citation-format.md)
 
 ## Live-Demo
 
-- Frontend (Vercel): _folgt_
-- Backend (Railway): _folgt_
+- **Frontend (Vercel):** https://sourcerer-two.vercel.app
+- **Backend (Railway):** https://sourcerer-backend-production.up.railway.app/health
 
 ## Autor
 
