@@ -19,3 +19,7 @@ class EmptyDocumentError(SourcererError):
 
 class NotebookNotFoundError(SourcererError):
     """Unbekannte Notebook-ID."""
+
+
+class DocumentNotFoundError(SourcererError):
+    """Unbekannte Dokument-ID (oder Dokument gehört zu einem anderen Notebook)."""

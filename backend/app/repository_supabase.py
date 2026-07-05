@@ -12,7 +12,7 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from app.domain import Chunk, DocumentMeta, Notebook, new_id
-from app.errors import NotebookNotFoundError
+from app.errors import DocumentNotFoundError, NotebookNotFoundError
 from app.repository import NotebookRepository
 
 
@@ -90,6 +90,25 @@ class SupabaseNotebookRepository(NotebookRepository):
                 for chunk in chunks
             ]
         ).execute()
+
+    def delete_document(self, notebook_id: str, document_id: str) -> None:
+        response = (
+            self._client.table("documents")
+            .select("id")
+            .eq("id", document_id)
+            .eq("notebook_id", notebook_id)
+            .execute()
+        )
+        if not response.data:
+            raise DocumentNotFoundError(
+                f"Dokument '{document_id}' existiert nicht in diesem Notebook."
+            )
+        # FK ON DELETE CASCADE räumt die chunks-Zeilen mit.
+        self._client.table("documents").delete().eq("id", document_id).execute()
+
+    def reset_notebook(self, notebook_id: str) -> None:
+        self.get_notebook(notebook_id)
+        self._client.table("documents").delete().eq("notebook_id", notebook_id).execute()
 
     def list_chunks(self, notebook_id: str) -> list[Chunk]:
         # Join über documents: nur Chunks dieses Notebooks, inkl. Dokumentname.

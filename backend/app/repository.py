@@ -9,7 +9,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from app.domain import Chunk, DocumentMeta, Notebook, new_id
-from app.errors import NotebookNotFoundError
+from app.errors import DocumentNotFoundError, NotebookNotFoundError
 
 
 class NotebookRepository(ABC):
@@ -32,6 +32,15 @@ class NotebookRepository(ABC):
     @abstractmethod
     def add_chunks(self, chunks: list[Chunk]) -> None:
         """Persistiert Chunk-Texte (ER-Diagramm D5) — Zitat-Quelle überlebt Neustarts."""
+
+    @abstractmethod
+    def delete_document(self, notebook_id: str, document_id: str) -> None:
+        """Entfernt EIN Dokument (+ Chunks) — wirft DocumentNotFoundError, wenn es
+        nicht existiert oder zu einem anderen Notebook gehört."""
+
+    @abstractmethod
+    def reset_notebook(self, notebook_id: str) -> None:
+        """Entfernt alle Dokumente + Chunks des Notebooks, behält das Notebook."""
 
     @abstractmethod
     def list_documents(self, notebook_id: str) -> list[DocumentMeta]: ...
@@ -77,6 +86,23 @@ class InMemoryNotebookRepository(NotebookRepository):
     def add_chunks(self, chunks: list[Chunk]) -> None:
         for chunk in chunks:
             self._chunks.setdefault(chunk.document_id, []).append(chunk)
+
+    def delete_document(self, notebook_id: str, document_id: str) -> None:
+        documents = self._documents.get(notebook_id)
+        if documents is None:
+            raise NotebookNotFoundError(f"Notebook '{notebook_id}' existiert nicht.")
+        if not any(d.id == document_id for d in documents):
+            raise DocumentNotFoundError(
+                f"Dokument '{document_id}' existiert nicht in diesem Notebook."
+            )
+        documents[:] = [d for d in documents if d.id != document_id]
+        self._chunks.pop(document_id, None)
+
+    def reset_notebook(self, notebook_id: str) -> None:
+        self.get_notebook(notebook_id)
+        for document in self._documents.get(notebook_id, []):
+            self._chunks.pop(document.id, None)
+        self._documents[notebook_id] = []
 
     def list_documents(self, notebook_id: str) -> list[DocumentMeta]:
         self.get_notebook(notebook_id)

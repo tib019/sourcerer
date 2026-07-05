@@ -134,3 +134,27 @@ def test_delete_notebook_deletes_by_id(repo, client):
     table, op, _, filters = client.calls[-1]
     assert (table, op) == ("notebooks", "delete")
     assert filters == {"id": "n1"}
+
+
+def test_delete_document_scoped_to_notebook(repo, client):
+    client.rows["documents"] = [{"id": "d1", "notebook_id": "n1"}]
+    repo.delete_document("n1", "d1")
+    table, op, _, filters = client.calls[-1]
+    assert (table, op) == ("documents", "delete")
+    assert filters == {"id": "d1"}
+
+
+def test_delete_document_wrong_notebook_raises(repo, client):
+    from app.errors import DocumentNotFoundError
+
+    client.rows["documents"] = [{"id": "d1", "notebook_id": "ANDERES"}]
+    with pytest.raises(DocumentNotFoundError):
+        repo.delete_document("n1", "d1")
+
+
+def test_reset_notebook_deletes_documents_by_notebook_id(repo, client):
+    client.rows["notebooks"] = [{"id": "n1", "name": "NB"}]
+    repo.reset_notebook("n1")
+    table, op, _, filters = client.calls[-1]
+    assert (table, op) == ("documents", "delete")
+    assert filters == {"notebook_id": "n1"}

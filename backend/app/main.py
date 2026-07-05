@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.config import Settings
 from app.errors import (
+    DocumentNotFoundError,
     EmptyDocumentError,
     FileTooLargeError,
     NotebookNotFoundError,
@@ -225,6 +226,25 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             for d in repository.list_documents(notebook_id)
         ]
 
+    @app.delete("/notebooks/{notebook_id}/documents/{document_id}", status_code=204)
+    def delete_document(notebook_id: str, document_id: str) -> None:
+        repository.get_notebook(notebook_id)
+        # Existenz VOR dem Vektor-Löschen prüfen (404 statt stiller Teil-Löschung) …
+        if not any(d.id == document_id for d in repository.list_documents(notebook_id)):
+            raise DocumentNotFoundError(
+                f"Dokument '{document_id}' existiert nicht in diesem Notebook."
+            )
+        # … dann Vektoren zuerst: schlägt danach die Metadaten-Löschung fehl, bleibt
+        # kein zitierfähiger Geister-Chunk zurück (Retry räumt den Rest).
+        store.delete_document(document_id, namespace=notebook_id)
+        repository.delete_document(notebook_id, document_id)
+
+    @app.post("/notebooks/{notebook_id}/reset", status_code=204)
+    def reset_notebook(notebook_id: str) -> None:
+        repository.get_notebook(notebook_id)
+        store.delete_namespace(notebook_id)
+        repository.reset_notebook(notebook_id)
+
     @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse)
     def audio_overview(notebook_id: str) -> AudioOverviewResponse:
         repository.get_notebook(notebook_id)
@@ -262,6 +282,7 @@ def _register_error_handlers(app: FastAPI) -> None:
         (FileTooLargeError, 413),
         (EmptyDocumentError, 422),
         (NotebookNotFoundError, 404),
+        (DocumentNotFoundError, 404),
     ):
 
         def handler(
