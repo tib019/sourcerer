@@ -12,6 +12,7 @@ function toAudioUrl(base64: string, mediaType: string): string {
 }
 
 export default function Home() {
+  const [notebooks, setNotebooks] = useState<Notebook[]>([]);
   const [notebook, setNotebook] = useState<Notebook | null>(null);
   const [documents, setDocuments] = useState<DocumentInfo[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -22,108 +23,209 @@ export default function Home() {
   const [audio, setAudio] = useState<{ url: string; summary: string } | null>(null);
   const [audioLoading, setAudioLoading] = useState(false);
 
-  // Demo-Scope: ein Notebook, beim ersten Laden angelegt bzw. wiederverwendet.
+  const clearConversation = useCallback(() => {
+    setMessages([]);
+    setActiveCitation(null);
+    setAudio((old) => {
+      if (old) URL.revokeObjectURL(old.url);
+      return null;
+    });
+  }, []);
+
+  const activateNotebook = useCallback(
+    async (target: Notebook) => {
+      setNotebook(target);
+      clearConversation();
+      setDocuments(await api.listDocuments(target.id));
+    },
+    [clearConversation],
+  );
+
+  // Beim Laden: Notebooks holen, erstes aktivieren (oder eines anlegen).
   useEffect(() => {
     (async () => {
       try {
         const existing = await api.listNotebooks();
-        const nb = existing[0] ?? (await api.createNotebook("Mein Notebook"));
-        setNotebook(nb);
-        setDocuments(await api.listDocuments(nb.id));
+        const list = existing.length
+          ? existing
+          : [await api.createNotebook("Mein Notebook")];
+        setNotebooks(list);
+        await activateNotebook(list[0]);
       } catch {
         setError(
           "Backend nicht erreichbar — läuft der RAG-Service? (uvicorn app.main:app)",
         );
       }
     })();
-  }, []);
+  }, [activateNotebook]);
 
   const refreshDocuments = useCallback(async (notebookId: string) => {
     setDocuments(await api.listDocuments(notebookId));
   }, []);
 
+  const run = async (action: () => Promise<void>) => {
+    setError(null);
+    try {
+      await action();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Aktion fehlgeschlagen");
+    }
+  };
+
   const handleUpload = async (file: File) => {
     if (!notebook) return;
     setUploading(true);
-    setError(null);
-    try {
+    await run(async () => {
       await api.uploadFile(notebook.id, file);
       await refreshDocuments(notebook.id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload fehlgeschlagen");
-    } finally {
-      setUploading(false);
-    }
+    });
+    setUploading(false);
   };
 
   const handlePaste = async (name: string, text: string) => {
     if (!notebook) return;
     setUploading(true);
-    setError(null);
-    try {
+    await run(async () => {
       await api.pasteText(notebook.id, name, text);
       await refreshDocuments(notebook.id);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Hinzufügen fehlgeschlagen");
-    } finally {
-      setUploading(false);
-    }
+    });
+    setUploading(false);
   };
 
   const handleAsk = async (question: string) => {
     if (!notebook) return;
     setMessages((m) => [...m, { role: "user", text: question, citations: [] }]);
     setAsking(true);
-    setError(null);
-    try {
+    await run(async () => {
       const response = await api.askQuestion(notebook.id, question);
       setMessages((m) => [
         ...m,
         { role: "assistant", text: response.answer, citations: response.citations },
       ]);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Anfrage fehlgeschlagen");
-    } finally {
-      setAsking(false);
-    }
+    });
+    setAsking(false);
   };
 
   const handleAudioOverview = async () => {
     if (!notebook) return;
     setAudioLoading(true);
-    setError(null);
-    try {
+    await run(async () => {
       const data = await api.createAudioOverview(notebook.id);
       setAudio((old) => {
         if (old) URL.revokeObjectURL(old.url);
         return { url: toAudioUrl(data.audio_base64, data.media_type), summary: data.summary };
       });
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Audio-Overview fehlgeschlagen");
-    } finally {
-      setAudioLoading(false);
-    }
+    });
+    setAudioLoading(false);
+  };
+
+  const handleDeleteDocument = async (doc: DocumentInfo) => {
+    if (!notebook) return;
+    if (!window.confirm(`Quelle „${doc.name}" endgültig löschen?`)) return;
+    await run(async () => {
+      await api.deleteDocument(notebook.id, doc.id);
+      if (activeCitation?.document_id === doc.id) setActiveCitation(null);
+      await refreshDocuments(notebook.id);
+    });
+  };
+
+  const handleCreateNotebook = async () => {
+    const name = window.prompt("Name des neuen Notebooks:", "Neues Notebook");
+    if (!name?.trim()) return;
+    await run(async () => {
+      const created = await api.createNotebook(name.trim());
+      setNotebooks((list) => [...list, created]);
+      await activateNotebook(created);
+    });
+  };
+
+  const handleSelectNotebook = async (id: string) => {
+    const target = notebooks.find((n) => n.id === id);
+    if (target && target.id !== notebook?.id) await run(() => activateNotebook(target));
+  };
+
+  const handleResetNotebook = async () => {
+    if (!notebook) return;
+    if (!window.confirm(`Alle Quellen aus „${notebook.name}" entfernen? Das Notebook bleibt.`))
+      return;
+    await run(async () => {
+      await api.resetNotebook(notebook.id);
+      clearConversation();
+      await refreshDocuments(notebook.id);
+    });
+  };
+
+  const handleDeleteNotebook = async () => {
+    if (!notebook) return;
+    if (!window.confirm(`Notebook „${notebook.name}" samt aller Quellen löschen?`)) return;
+    await run(async () => {
+      await api.deleteNotebook(notebook.id);
+      const remaining = notebooks.filter((n) => n.id !== notebook.id);
+      const list = remaining.length
+        ? remaining
+        : [await api.createNotebook("Mein Notebook")];
+      setNotebooks(list);
+      await activateNotebook(list[0]);
+    });
   };
 
   return (
     <main className="flex h-screen flex-col">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
+      <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-6 py-3">
         <div className="flex items-center gap-2">
           <span className="text-xl">🧙‍♂️</span>
           <h1 className="text-lg font-bold tracking-tight">Sourcerer</h1>
-          <span className="text-sm text-slate-400">
-            {notebook ? `· ${notebook.name}` : ""}
-          </span>
         </div>
-        <button
-          onClick={handleAudioOverview}
-          disabled={!notebook || documents.length === 0 || audioLoading}
-          data-testid="audio-overview-button"
-          className="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700
-            hover:bg-indigo-50 disabled:opacity-40"
-        >
-          {audioLoading ? "Erzeuge Audio…" : "🎧 Audio-Overview"}
-        </button>
+
+        <div className="flex items-center gap-2">
+          <select
+            value={notebook?.id ?? ""}
+            onChange={(e) => handleSelectNotebook(e.target.value)}
+            data-testid="notebook-select"
+            className="max-w-48 rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+          >
+            {notebooks.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.name}
+              </option>
+            ))}
+          </select>
+          <button
+            onClick={handleCreateNotebook}
+            data-testid="notebook-create"
+            title="Neues Notebook"
+            className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm hover:bg-slate-50"
+          >
+            ＋
+          </button>
+          <button
+            onClick={handleResetNotebook}
+            disabled={!notebook || documents.length === 0}
+            data-testid="notebook-reset"
+            title="Alle Quellen entfernen, Notebook behalten"
+            className="rounded-lg border border-slate-300 px-2.5 py-1.5 text-sm hover:bg-slate-50 disabled:opacity-40"
+          >
+            ⟲
+          </button>
+          <button
+            onClick={handleDeleteNotebook}
+            disabled={!notebook}
+            data-testid="notebook-delete"
+            title="Notebook löschen"
+            className="rounded-lg border border-red-200 px-2.5 py-1.5 text-sm text-red-600 hover:bg-red-50 disabled:opacity-40"
+          >
+            🗑
+          </button>
+          <button
+            onClick={handleAudioOverview}
+            disabled={!notebook || documents.length === 0 || audioLoading}
+            data-testid="audio-overview-button"
+            className="rounded-lg border border-indigo-300 px-3 py-1.5 text-sm text-indigo-700
+              hover:bg-indigo-50 disabled:opacity-40"
+          >
+            {audioLoading ? "Erzeuge Audio…" : "🎧 Audio-Overview"}
+          </button>
+        </div>
       </header>
 
       {audio && (
@@ -158,6 +260,7 @@ export default function Home() {
           activeCitation={activeCitation}
           onUploadFile={handleUpload}
           onPasteText={handlePaste}
+          onDeleteDocument={handleDeleteDocument}
           onCloseCitation={() => setActiveCitation(null)}
           busy={uploading || !notebook}
         />

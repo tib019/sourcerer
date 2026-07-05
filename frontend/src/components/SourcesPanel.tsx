@@ -8,6 +8,7 @@ export function SourcesPanel({
   activeCitation,
   onUploadFile,
   onPasteText,
+  onDeleteDocument,
   onCloseCitation,
   busy,
 }: {
@@ -15,6 +16,7 @@ export function SourcesPanel({
   activeCitation: Citation | null;
   onUploadFile: (file: File) => void;
   onPasteText: (name: string, text: string) => void;
+  onDeleteDocument: (doc: DocumentInfo) => void;
   onCloseCitation: () => void;
   busy: boolean;
 }) {
@@ -105,15 +107,25 @@ export function SourcesPanel({
         {documents.map((doc) => (
           <li
             key={doc.id}
-            className={`rounded-lg p-3 text-sm ${
+            className={`group flex items-start justify-between rounded-lg p-3 text-sm ${
               activeCitation?.document_id === doc.id ? "bg-indigo-50" : ""
             }`}
           >
-            <p className="font-medium text-slate-800">{doc.name}</p>
-            <p className="text-xs text-slate-500">
-              {doc.page_count} Seite{doc.page_count === 1 ? "" : "n"} ·{" "}
-              {doc.chunk_count} Chunks
-            </p>
+            <div>
+              <p className="font-medium text-slate-800">{doc.name}</p>
+              <p className="text-xs text-slate-500">
+                {doc.page_count} Seite{doc.page_count === 1 ? "" : "n"} ·{" "}
+                {doc.chunk_count} Chunks
+              </p>
+            </div>
+            <button
+              onClick={() => onDeleteDocument(doc)}
+              aria-label={`Quelle ${doc.name} löschen`}
+              title="Quelle löschen"
+              className="ml-2 text-slate-300 hover:text-red-600 group-hover:text-slate-400"
+            >
+              ✕
+            </button>
           </li>
         ))}
       </ul>

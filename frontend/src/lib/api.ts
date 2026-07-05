@@ -49,6 +49,28 @@ export function createAudioOverview(notebookId: string): Promise<AudioOverviewDa
   return request(`/notebooks/${notebookId}/audio-overview`, { method: "POST" });
 }
 
+async function requestVoid(path: string, init?: RequestInit): Promise<void> {
+  const response = await fetch(`${BASE}${path}`, init);
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new Error(body?.detail ?? `HTTP ${response.status}`);
+  }
+}
+
+export function deleteDocument(notebookId: string, documentId: string): Promise<void> {
+  return requestVoid(`/notebooks/${notebookId}/documents/${documentId}`, {
+    method: "DELETE",
+  });
+}
+
+export function resetNotebook(notebookId: string): Promise<void> {
+  return requestVoid(`/notebooks/${notebookId}/reset`, { method: "POST" });
+}
+
+export function deleteNotebook(notebookId: string): Promise<void> {
+  return requestVoid(`/notebooks/${notebookId}`, { method: "DELETE" });
+}
+
 export function askQuestion(notebookId: string, question: string): Promise<ChatResponse> {
   return request(`/notebooks/${notebookId}/chat`, {
     method: "POST",
