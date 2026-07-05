@@ -36,7 +36,9 @@ dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
 - **Klickbare Zitate:** Jedes Zitat zeigt Dokument, Seite und die Original-Textstelle
 - **Ehrliches „Weiß ich nicht":** Steht die Antwort nicht in den Quellen, sagt das System das —
   statt zu halluzinieren (per Test abgesichert, siehe [Groundedness-Eval](backend/tests/eval/))
-- **Notebook-Konzept:** Quellen sind pro Notebook isoliert
+- **Notebook-Verwaltung:** mehrere Notebooks (Quellen strikt isoliert), Notebook
+  anlegen/zurücksetzen/löschen, einzelne Quellen löschen — Löschen räumt Vektoren
+  UND Metadaten (kein Orphan bleibt zurück)
 - **Audio-Overview:** Ein Klick fasst alle Quellen zusammen und liest sie vor
   (LLM-Summary → TTS, [ADR-008](docs/adr/ADR-008-audio-overview-tts.md))
 - **Studio (alles gegroundet, mit klickbaren Zitaten):** vorgeschlagene Startfragen,
@@ -53,6 +55,7 @@ dank deterministischer Fake-Provider ohne Keys, ohne Netz, ohne Kosten.
 | Vektor-DB | Pinecone (Interface: austauschbar; fake-Modus: In-Memory) | Produktionserfahrung |
 | Notebook-/Dokument-Metadaten | Supabase Postgres (openai-Modus; fake-Modus: In-Memory) | persistent über Neustarts, EU-Region |
 | LLM | OpenAI GPT-4o + text-embedding-3-small, hinter Provider-Interface | BYOM-ready |
+| TTS | OpenAI tts-1, hinter `TTSProvider`-Interface | ein API-Call, kein neues System |
 | CI/CD | GitHub Actions | Regression bei jedem Push |
 
 Alle Architektur-Entscheidungen sind als ADRs dokumentiert: [docs/adr/](docs/adr/)
@@ -84,9 +87,9 @@ sourcerer/
   backend/             # FastAPI (Railway, Docker)
     app/
       ingest/          # extract, chunk, ingestor
-      rag/             # retriever, prompt, citations, pipeline
-      providers/       # Embedding/LLM/VectorStore-Interfaces + Implementierungen
-    tests/             # pytest: unit/, math/, eval/
+      rag/             # retriever, prompt, citations, pipeline, studio, audio_overview
+      providers/       # Embedding/LLM/VectorStore/TTS-Interfaces + Implementierungen
+    tests/             # pytest: unit/, math/, eval/ (Groundedness-Golden-Set)
   e2e/                 # Playwright
   docs/                # ADRs + 6 Diagramme (Mermaid)
   .github/workflows/   # CI
@@ -118,6 +121,19 @@ npm install
 npm run dev                    # erwartet Backend auf http://localhost:8000
 ```
 
+## API (Auszug)
+
+| Endpoint | Zweck |
+|---|---|
+| `POST /notebooks` · `GET /notebooks` · `DELETE /notebooks/{id}` | Notebooks verwalten |
+| `POST /notebooks/{id}/documents` (Datei) · `…/documents/text` (Paste) | Quellen ingestieren |
+| `DELETE /notebooks/{id}/documents/{doc_id}` · `POST /notebooks/{id}/reset` | Quellen entfernen (räumt Vektoren + Metadaten) |
+| `POST /notebooks/{id}/chat` | Grounded Chat mit `[n]`-Zitaten |
+| `POST /notebooks/{id}/suggested-questions` · `/report` · `/flashcards` · `/quiz` | Studio-Generatoren (JSON, zitiert) |
+| `POST /notebooks/{id}/audio-overview` | Quellen-Summary als Sprache |
+
+Interaktive Doku: `/docs` (FastAPI/OpenAPI) auf dem laufenden Backend.
+
 ## Tests
 
 | Ebene | Befehl | Was getestet wird |
@@ -126,9 +142,9 @@ npm run dev                    # erwartet Backend auf http://localhost:8000
 | Mathe (deterministisch) | `cd backend && pytest tests/math` | Cosine-Similarity, Top-k-Ranking mit festen Vektoren, Overlap-Arithmetik |
 | Groundedness-Eval | `cd backend && pytest tests/eval` | Golden-Set: zitierte Chunks enthalten die Antwort; Frage ohne Quelle → „steht nicht in den Quellen" |
 | Unit (TS) | `cd frontend && npm test` | Zitat-Parsing/-Rendering, API-Client |
-| E2E | `cd e2e && npx playwright test` | Upload → Frage → zitierte Antwort → Zitat-Klick |
+| E2E | `cd e2e && npx playwright test` | Upload → Frage → zitierte Antwort → Zitat-Klick · Quellen löschen · Notebook-Isolation · Studio |
 
-Alle Ebenen laufen in CI bei jedem Push.
+Alle Ebenen laufen in CI bei jedem Push (aktuell 97 pytest + 11 Vitest + 9 Playwright).
 
 ## Sicherheit
 
