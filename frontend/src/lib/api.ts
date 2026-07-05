@@ -3,6 +3,7 @@ import type {
   ChatResponse,
   DocumentInfo,
   FlashcardsData,
+  MindmapData,
   Notebook,
   QuizData,
   ReportData,
@@ -71,6 +72,10 @@ export function generateFlashcards(notebookId: string): Promise<FlashcardsData> 
 
 export function generateQuiz(notebookId: string): Promise<QuizData> {
   return request(`/notebooks/${notebookId}/quiz`, { method: "POST" });
+}
+
+export function generateMindmap(notebookId: string): Promise<MindmapData> {
+  return request(`/notebooks/${notebookId}/mindmap`, { method: "POST" });
 }
 
 async function requestVoid(path: string, init?: RequestInit): Promise<void> {

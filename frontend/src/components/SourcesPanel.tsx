@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { Citation, DocumentInfo } from "@/lib/types";
+import { MAX_PASTE_CHARS, validatePastedText } from "@/lib/validation";
 
 export function SourcesPanel({
   documents,
@@ -24,6 +25,7 @@ export function SourcesPanel({
   const [showPaste, setShowPaste] = useState(false);
   const [pasteName, setPasteName] = useState("");
   const [pasteText, setPasteText] = useState("");
+  const [pasteError, setPasteError] = useState<string | null>(null);
 
   return (
     <aside className="flex h-full w-80 shrink-0 flex-col border-r border-slate-200 bg-white">
@@ -67,10 +69,15 @@ export function SourcesPanel({
             className="mt-3 space-y-2"
             onSubmit={(e) => {
               e.preventDefault();
-              if (!pasteName.trim() || !pasteText.trim()) return;
+              const error = validatePastedText(pasteName, pasteText);
+              if (error) {
+                setPasteError(error);
+                return;
+              }
               onPasteText(pasteName.trim(), pasteText);
               setPasteName("");
               setPasteText("");
+              setPasteError(null);
               setShowPaste(false);
             }}
           >
@@ -87,6 +94,15 @@ export function SourcesPanel({
               rows={5}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
+            <p className="text-right text-xs text-slate-400">
+              {pasteText.length.toLocaleString("de-DE")} /{" "}
+              {MAX_PASTE_CHARS.toLocaleString("de-DE")} Zeichen
+            </p>
+            {pasteError && (
+              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700" role="alert">
+                {pasteError}
+              </p>
+            )}
             <button
               type="submit"
               className="w-full rounded-lg bg-slate-800 px-3 py-2 text-sm font-medium text-white

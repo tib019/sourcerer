@@ -23,7 +23,22 @@ from app.repository import NotebookRepository
 # Kostendeckel wie beim Audio-Overview: Querschnitt statt Alles.
 MAX_STUDIO_CHUNKS = 12
 
+# Mindmap: Knoten-Cap und Label-Härtung — Mermaid-Syntax entsteht NUR serverseitig.
+MAX_MINDMAP_NODES = 25
+_MINDMAP_LABEL_ALLOWED = re.compile(r"[^\w \-.,;:!?/%äöüÄÖÜß]")
+
 _JSON_FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.MULTILINE)
+
+
+def _sanitize_label(label: str, fallback: str = "…") -> str:
+    """Entfernt alles, was Mermaid-Syntax brechen oder injizieren könnte.
+
+    Whitelist statt Blacklist: nur Wortzeichen + harmlose Interpunktion.
+    Klammern/Quotes/Backticks/Zeilenumbrüche fliegen raus, Länge gedeckelt.
+    """
+    clean = _MINDMAP_LABEL_ALLOWED.sub(" ", label)
+    clean = " ".join(clean.split())[:60].strip()
+    return clean or fallback
 
 
 class StudioSource(BaseModel):
@@ -76,6 +91,22 @@ class QuizResult(BaseModel):
     sources: list[StudioSource] = Field(default_factory=list)
 
 
+class _MindmapBranch(BaseModel):
+    """Internes LLM-Schema: das LLM liefert einen Baum, KEINEN Mermaid-Text."""
+
+    label: str
+    children: list[str] = Field(default_factory=list)
+
+
+class _MindmapTree(BaseModel):
+    root: str
+    branches: list[_MindmapBranch] = Field(min_length=1)
+
+
+class MindmapResult(BaseModel):
+    mermaid: str
+
+
 _BASE_RULES = """Regeln:
 - Nutze AUSSCHLIESSLICH die nummerierten Quellen — nichts erfinden, kein Weltwissen.
 - Zitat-Verweise sind Quellen-Nummern (Ganzzahlen aus [1..k]).
@@ -101,6 +132,9 @@ genau eine richtig (answer_index, 0-basiert), citation = Quellen-Nummer des Bele
 Falsche Optionen müssen plausibel klingen, dürfen aber nicht aus den Quellen belegbar
 sein. Schema: {"questions": [{"question": "...", "options": ["a","b","c","d"],
 "answer_index": 0, "citation": 1}]}""",
+    "mindmap": """Erzeuge eine Mindmap-Gliederung der Quellen: ein Wurzel-Thema,
+3-6 Hauptzweige mit je 0-4 Unterpunkten (kurze Stichwort-Labels, keine Saetze).
+Schema: {"root": "...", "branches": [{"label": "...", "children": ["...", "..."]}]}""",
 }
 
 
@@ -111,7 +145,12 @@ class StudioService:
 
     def suggested_questions(self, notebook_id: str) -> SuggestedQuestionsResult:
         raw, _ = self._generate(notebook_id, "suggested_questions")
-        return self._validate(SuggestedQuestionsResult, raw)
+        result = self._validate(SuggestedQuestionsResult, raw)
+        # Kosmetik: GPT haengt gern [n]-Marker an Fragen — in Chips sind sie Rauschen.
+        result.questions = [
+            re.sub(r"\s*\[\d+\]", "", question).strip() for question in result.questions
+        ]
+        return result
 
     def report(self, notebook_id: str) -> ReportResult:
         raw, chunks = self._generate(notebook_id, "report")
@@ -145,6 +184,30 @@ class StudioService:
             raise GenerationError("Quiz-Generierung lieferte keine gültige Frage.")
         result.questions = kept
         return result
+
+    def mindmap(self, notebook_id: str) -> MindmapResult:
+        """Gegroundete Mindmap: LLM liefert einen Baum, den Mermaid-Text bauen wir.
+
+        Dadurch kann LLM-Output die Mermaid-Syntax weder brechen noch etwas
+        injizieren (ADR-010): Labels laufen durch eine Whitelist, die Knotenzahl
+        ist auf MAX_MINDMAP_NODES gedeckelt.
+        """
+        raw, _ = self._generate(notebook_id, "mindmap")
+        tree = self._validate(_MindmapTree, raw)
+
+        lines = ["mindmap", f"  root(({_sanitize_label(tree.root, 'Quellen')}))"]
+        nodes = 1
+        for branch in tree.branches:
+            if nodes >= MAX_MINDMAP_NODES:
+                break
+            lines.append(f"    {_sanitize_label(branch.label)}")
+            nodes += 1
+            for child in branch.children:
+                if nodes >= MAX_MINDMAP_NODES:
+                    break
+                lines.append(f"      {_sanitize_label(child)}")
+                nodes += 1
+        return MindmapResult(mermaid="\n".join(lines))
 
     # -- intern ---------------------------------------------------------------
 

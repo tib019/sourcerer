@@ -37,6 +37,7 @@ from app.rag.prompt_builder import PromptBuilder
 from app.rag.retriever import Retriever
 from app.rag.studio import (
     FlashcardsResult,
+    MindmapResult,
     QuizResult,
     ReportResult,
     StudioService,
@@ -276,6 +277,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     def quiz(notebook_id: str) -> QuizResult:
         repository.get_notebook(notebook_id)
         return studio.quiz(notebook_id)
+
+    @app.post("/notebooks/{notebook_id}/mindmap", response_model=MindmapResult)
+    def mindmap(notebook_id: str) -> MindmapResult:
+        repository.get_notebook(notebook_id)
+        return studio.mindmap(notebook_id)
 
     @app.post("/notebooks/{notebook_id}/audio-overview", response_model=AudioOverviewResponse)
     def audio_overview(notebook_id: str) -> AudioOverviewResponse:

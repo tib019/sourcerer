@@ -82,6 +82,20 @@ test("Startfragen-Chips erscheinen nach Upload, Klick stellt die Frage", async (
   await expect(chips).not.toBeVisible();
 });
 
+test("Studio: Mindmap rendert als SVG (oder zeigt sauberen Fallback)", async ({ page }) => {
+  await freshNotebookWithSource(page, "Mindmap-Test");
+
+  await page.getByTestId("studio-tab-mindmap").click();
+  await page.getByTestId("studio-generate-mindmap").click();
+
+  const container = page.getByTestId("studio-mindmap");
+  await expect(container).toBeVisible();
+  // Erfolgsfall: SVG. Der Fallback wuerde mindmap-fallback zeigen — beides ist
+  // "kein Crash", aber mit validem Server-Mermaid erwarten wir das SVG.
+  await expect(page.getByTestId("mindmap-svg")).toBeVisible();
+  await expect(page.getByTestId("mindmap-svg").locator("svg")).toBeVisible();
+});
+
 test("Studio: Empty-State ohne Quellen, Buttons erst mit Quellen", async ({ page }) => {
   await page.goto("/");
   await expect(page.getByRole("button", { name: "Datei hochladen" })).toBeEnabled();

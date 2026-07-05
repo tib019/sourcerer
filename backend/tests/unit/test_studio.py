@@ -78,6 +78,46 @@ class TestStructure:
             assert q.citation is None or q.citation in valid
 
 
+class TestMindmap:
+    def test_mindmap_is_nonempty_and_capped(self, service_and_nb):
+        service, nb = service_and_nb
+        result = service.mindmap(nb)
+        assert result.mermaid.startswith("mindmap")
+        node_lines = [line for line in result.mermaid.splitlines()[1:] if line.strip()]
+        assert 1 <= len(node_lines) <= 25
+
+    def test_hostile_labels_are_sanitized(self):
+        class EvilLLM(LLMProvider):
+            def complete(self, messages):
+                return LLMResponse(
+                    text='{"root": "A((B))`; click", "branches": '
+                    '[{"label": "x[[link]]\\nY", "children": ["<script>alert(1)</script>"]}]}'
+                )
+
+        repository, nb = _repo_with_sources()
+        result = StudioService(repository=repository, llm=EvilLLM()).mindmap(nb)
+        for forbidden in ("((B))", "`", "[[", "<script>", "\\n"):
+            assert forbidden not in result.mermaid.replace("root((", "", 1)
+        # Struktur bleibt valide: root-Zeile + Knoten mit Einrueckung
+        assert result.mermaid.splitlines()[1].startswith("  root((")
+
+    def test_node_cap_truncates_oversized_trees(self):
+        class HugeLLM(LLMProvider):
+            def complete(self, messages):
+                import json as _json
+
+                branches = [
+                    {"label": f"B{i}", "children": [f"C{i}{j}" for j in range(10)]}
+                    for i in range(10)
+                ]
+                return LLMResponse(text=_json.dumps({"root": "R", "branches": branches}))
+
+        repository, nb = _repo_with_sources()
+        result = StudioService(repository=repository, llm=HugeLLM()).mindmap(nb)
+        node_lines = [line for line in result.mermaid.splitlines()[1:] if line.strip()]
+        assert len(node_lines) <= 25
+
+
 class TestGuards:
     def test_empty_notebook_rejects_without_llm_call(self):
         class SpyLLM(LLMProvider):
@@ -116,6 +156,17 @@ class TestGuards:
         repository, nb = _repo_with_sources()
         with pytest.raises(GenerationError):
             StudioService(repository=repository, llm=BrokenLLM()).report(nb)
+
+    def test_citation_markers_are_stripped_from_suggested_questions(self):
+        class MarkerLLM(LLMProvider):
+            def complete(self, messages):
+                return LLMResponse(
+                    text='{"questions": ["Was sagt Lenin? [1]", "Wie? [2][3]", "Wo?"]}'
+                )
+
+        repository, nb = _repo_with_sources()
+        result = StudioService(repository=repository, llm=MarkerLLM()).suggested_questions(nb)
+        assert result.questions == ["Was sagt Lenin?", "Wie?", "Wo?"]
 
     def test_json_code_fence_is_tolerated(self):
         class FencedLLM(LLMProvider):
@@ -158,7 +209,7 @@ class TestAPI:
         return nb
 
     @pytest.mark.parametrize(
-        "path", ["suggested-questions", "report", "flashcards", "quiz"]
+        "path", ["suggested-questions", "report", "flashcards", "quiz", "mindmap"]
     )
     def test_endpoints_return_json(self, client, notebook_id, path):
         response = client.post(f"/notebooks/{notebook_id}/{path}")
@@ -166,7 +217,7 @@ class TestAPI:
         assert response.json()
 
     @pytest.mark.parametrize(
-        "path", ["suggested-questions", "report", "flashcards", "quiz"]
+        "path", ["suggested-questions", "report", "flashcards", "quiz", "mindmap"]
     )
     def test_endpoints_422_on_empty_notebook(self, client, path):
         empty = client.post("/notebooks", json={"name": "leer"}).json()["id"]

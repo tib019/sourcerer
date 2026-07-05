@@ -75,3 +75,7 @@ export interface QuizData {
   questions: QuizQuestion[];
   sources: StudioSource[];
 }
+
+export interface MindmapData {
+  mermaid: string;
+}

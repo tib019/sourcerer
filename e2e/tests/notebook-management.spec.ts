@@ -19,6 +19,11 @@ test("Quelle löschen: nur die eine weg (auch nach Reload), andere bleibt zitier
 }) => {
   await ready(page);
 
+  // Eigenes Notebook — das Default-Notebook teilen sich parallele Specs.
+  page.once("dialog", (dialog) => dialog.accept("Löschen-Test"));
+  await page.getByTestId("notebook-create").click();
+  await expect(page.getByTestId("notebook-select")).toContainText("Löschen-Test");
+
   await uploadSource(page, "planeten.txt", "Der Mars hat zwei Monde: Phobos und Deimos.");
   await uploadSource(page, "fluesse.txt", "Die Donau fliesst durch zehn Laender.");
 
@@ -28,8 +33,10 @@ test("Quelle löschen: nur die eine weg (auch nach Reload), andere bleibt zitier
   await expect(page.getByTestId("document-list")).not.toContainText("planeten.txt");
   await expect(page.getByTestId("document-list")).toContainText("fluesse.txt");
 
-  // Reload: Loeschung ist persistent
+  // Reload: Loeschung ist persistent (nach Reload unser Notebook wieder waehlen —
+  // die App aktiviert sonst das erste der Liste)
   await ready(page);
+  await page.getByTestId("notebook-select").selectOption({ label: "Löschen-Test" });
   await expect(page.getByTestId("document-list")).not.toContainText("planeten.txt");
   await expect(page.getByTestId("document-list")).toContainText("fluesse.txt");
 

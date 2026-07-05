@@ -113,6 +113,14 @@ def _studio_json(task: str, sources: list[tuple[str, str]]) -> str:
         ]
         return _json.dumps({"cards": cards})
 
+    if task == "mindmap":
+        branches = []
+        for number, text in sources[:5]:
+            first = re.split(r"(?<=[.!?])\s+", text)[0]
+            words = [w.strip(".,!?") for w in first.split() if len(w) > 3][:4]
+            branches.append({"label": f"Quelle {number}", "children": words[:3]})
+        return _json.dumps({"root": "Quellen-Überblick", "branches": branches})
+
     if task == "quiz":
         questions = [
             {

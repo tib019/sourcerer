@@ -5,13 +5,15 @@ import * as api from "@/lib/api";
 import type {
   Citation,
   FlashcardsData,
+  MindmapData,
   QuizData,
   ReportData,
   StudioSource,
 } from "@/lib/types";
 import { CitationBadge } from "./CitationBadge";
+import { MindmapView } from "./MindmapView";
 
-type Tab = "report" | "cards" | "quiz" | "audio";
+type Tab = "report" | "cards" | "quiz" | "mindmap" | "audio";
 
 function toAudioUrl(base64: string, mediaType: string): string {
   const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
@@ -72,6 +74,7 @@ export function StudioPanel({
   const [report, setReport] = useState<ReportData | null>(null);
   const [cards, setCards] = useState<FlashcardsData | null>(null);
   const [quiz, setQuiz] = useState<QuizData | null>(null);
+  const [mindmap, setMindmap] = useState<MindmapData | null>(null);
   const [audio, setAudio] = useState<{ url: string; summary: string } | null>(null);
   const [flipped, setFlipped] = useState<Set<number>>(new Set());
   const [answers, setAnswers] = useState<Record<number, number>>({});
@@ -83,6 +86,7 @@ export function StudioPanel({
     setReport(null);
     setCards(null);
     setQuiz(null);
+    setMindmap(null);
     setFlipped(new Set());
     setAnswers({});
     setError(null);
@@ -106,6 +110,7 @@ export function StudioPanel({
         setQuiz(await api.generateQuiz(notebookId));
         setAnswers({});
       }
+      if (which === "mindmap") setMindmap(await api.generateMindmap(notebookId));
       if (which === "audio") {
         const data = await api.createAudioOverview(notebookId);
         setAudio((old) => {
@@ -124,6 +129,7 @@ export function StudioPanel({
     { id: "report", label: "Bericht" },
     { id: "cards", label: "Karten" },
     { id: "quiz", label: "Quiz" },
+    { id: "mindmap", label: "Mindmap" },
     { id: "audio", label: "Audio" },
   ];
 
@@ -131,6 +137,7 @@ export function StudioPanel({
     report: "Bericht generieren",
     cards: "Karteikarten generieren",
     quiz: "Quiz generieren",
+    mindmap: "Mindmap generieren",
     audio: "Audio-Overview erzeugen",
   };
 
@@ -138,6 +145,7 @@ export function StudioPanel({
     report: !!report,
     cards: !!cards,
     quiz: !!quiz,
+    mindmap: !!mindmap,
     audio: !!audio,
   };
 
@@ -316,6 +324,12 @@ export function StudioPanel({
                   );
                 })}
               </ol>
+            )}
+
+            {tab === "mindmap" && mindmap && (
+              <div data-testid="studio-mindmap">
+                <MindmapView mermaid={mindmap.mermaid} />
+              </div>
             )}
 
             {tab === "audio" && audio && (
