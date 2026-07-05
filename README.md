@@ -5,12 +5,18 @@
 Ein NotebookLM-Klon: Dokumente hochladen, Fragen stellen, Antworten **ausschließlich aus den
 Quellen** — mit klickbaren Zitaten, die auf die Original-Textstelle zeigen.
 
+**➜ Live-Demo: https://sourcerer-two.vercel.app**
+
 ![CI](https://github.com/tib019/sourcerer/actions/workflows/ci.yml/badge.svg)
+![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)
+![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)
+![Node 22](https://img.shields.io/badge/node-22-brightgreen.svg)
+![Tests: 153](https://img.shields.io/badge/tests-153%20passing-success.svg)
 
 ### Demo
 
-<!-- TODO: Demo-GIF hier einsetzen (Upload → Frage → zitierte Antwort → Zitat-Klick) -->
-_Demo-GIF folgt._
+![Demo](docs/demo.gif)
+<!-- GIF zeigt: Upload → Frage → zitierte Antwort → Zitat-Klick → Studio -->
 
 ### Quickstart offline (keine API-Keys nötig)
 
@@ -89,7 +95,7 @@ sourcerer/
   frontend/            # Next.js/TS (Vercel)
   backend/             # FastAPI (Railway, Docker)
     app/
-      ingest/          # extract, chunk, ingestor
+      ingest/          # extract, chunk, ingestor, url_fetcher (SSRF-Guard)
       rag/             # retriever, prompt, citations, pipeline, studio, audio_overview
       providers/       # Embedding/LLM/VectorStore/TTS-Interfaces + Implementierungen
     tests/             # pytest: unit/, math/, eval/ (Groundedness-Golden-Set)
@@ -159,8 +165,8 @@ Vollständige Referenz mit Request/Response-Formen und Fehlercodes:
 | Unit (TS) | `cd frontend && npm test` | Zitat-Parsing/-Rendering, API-Client |
 | E2E | `cd e2e && npx playwright test` | Upload → Frage → zitierte Antwort → Zitat-Klick · Quellen löschen · Notebook-Isolation · Studio |
 
-Alle Ebenen laufen in CI bei jedem Push (aktuell 123 pytest + 20 Vitest + 10 Playwright).
-Details: [docs/testing.md](docs/testing.md)
+Alle Ebenen laufen in CI bei jedem Push — aktuell **153 Tests**
+(123 pytest + 20 Vitest + 10 Playwright). Details: [docs/testing.md](docs/testing.md)
 
 ## Sicherheit
 
@@ -178,6 +184,6 @@ Details: [NOTES.md](NOTES.md) · [ADR-005](docs/adr/ADR-005-citation-format.md)
 - **Frontend (Vercel):** https://sourcerer-two.vercel.app
 - **Backend (Railway):** https://sourcerer-backend-production.up.railway.app/health
 
-## Autor
+## Lizenz & Autor
 
-Tobias — Testprojekt für Everlast.
+MIT ([LICENSE](LICENSE)) · Tobias Heiko Buß — Testprojekt für Everlast.

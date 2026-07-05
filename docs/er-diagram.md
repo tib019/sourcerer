@@ -18,7 +18,7 @@ erDiagram
         text media_type "application/pdf | text/plain"
         int page_count
         int chunk_count
-        text storage_path "Supabase Storage (Original)"
+        text storage_path "Herkunfts-URL bei Website-Import (sonst null)"
         timestamptz created_at
     }
 

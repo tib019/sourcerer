@@ -2,7 +2,7 @@
 
 ```mermaid
 flowchart TD
-    A([Upload: Datei / Paste]) --> B{Validierung}
+    A([Upload: Datei / Paste / Website-Import*]) --> B{Validierung}
     B -- "Typ nicht erlaubt" --> E1[[400: nur PDF / Plaintext]]
     B -- "zu groß (> Limit)" --> E2[[413: Datei zu groß]]
     B -- ok --> C[TextExtractor: Rohtext + Seiten]
@@ -17,5 +17,9 @@ flowchart TD
 ```
 
 Fehlerpfade sind Teil des Vertrags: Upload-Validierung (Typ-Whitelist, Größenlimit),
-leere PDFs werden abgewiesen statt stumm 0 Chunks zu erzeugen, und ein Embedding-Fehler
-lässt keinen halb-ingestierten Zustand zurück.
+leere PDFs werden abgewiesen statt stumm 0 Chunks zu erzeugen, und ein Metadaten-Fehler
+nach dem Vektor-Upsert rollt die Vektoren zurück (kein halb-ingestierter Zustand).
+
+\* Der Website-Import durchläuft VOR diesem Diagramm den `WebPageFetcher` mit
+SSRF-Guard und Extraktion ([ADR-009](adr/ADR-009-url-import-ssrf.md)) — der
+extrahierte Text kommt dann als Plaintext in genau diesen Pfad.

@@ -4,7 +4,7 @@
 flowchart TB
     subgraph GH["GitHub"]
         REPO[Repo tib019/sourcerer]
-        CI["Actions: lint → test → deploy<br/>(rot = kein Merge)"]
+        CI["Actions: lint → alle Testebenen<br/>(rot = kein Merge)"]
         REPO --> CI
     end
 
@@ -22,8 +22,10 @@ flowchart TB
         OAI["OpenAI API"]
     end
 
-    CI -- "Deploy bei grünem main" --> FE
-    CI -- "Docker Build + Deploy" --> BE
+    CLI["Manueller Deploy nach grüner CI:<br/>vercel deploy --prod · railway up"]
+    CI -.->|"Gate: erst grün, dann deployen"| CLI
+    CLI --> FE
+    CLI --> BE
     Browser((Browser)) -- HTTPS --> FE
     FE -- "HTTPS REST" --> BE
     BE --> PC
@@ -35,4 +37,5 @@ flowchart TB
   Frontend kennt nur die API-URL.
 - **CORS:** Backend erlaubt genau den Vercel-Origin.
 - **CI-Gate:** Lint + alle Testebenen (unit, math, eval, TS-unit, E2E) laufen bei jedem
-  Push; Deploy nur bei grünem `main`.
+  Push. Deploys erfolgen manuell per CLI (`railway up`, `vercel deploy --prod`) —
+  Regel: nur bei grünem `main` (Auto-Deploy wäre der nächste Ausbauschritt).
