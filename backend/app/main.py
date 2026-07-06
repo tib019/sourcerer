@@ -9,7 +9,7 @@ from __future__ import annotations
 import base64
 import logging
 
-from fastapi import FastAPI, File, Request, UploadFile
+from fastapi import FastAPI, File, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
@@ -192,7 +192,9 @@ def create_app(
             NotebookResponse(id=n.id, name=n.name) for n in repository.list_notebooks()
         ]
 
-    @app.delete("/notebooks/{notebook_id}", status_code=204,
+    # 204-Routen: response_class=Response (body-los) — FastAPIs Default-JSONResponse
+    # wuerde 'null' rendern, was neuere Starlette-Versionen bei 204 asserten.
+    @app.delete("/notebooks/{notebook_id}", status_code=204, response_class=Response,
                 summary="Notebook löschen (Metadaten + Vektor-Namespace)")
     def delete_notebook(notebook_id: str) -> None:
         repository.delete_notebook(notebook_id)
@@ -288,6 +290,7 @@ def create_app(
         ]
 
     @app.delete("/notebooks/{notebook_id}/documents/{document_id}", status_code=204,
+                response_class=Response,
                 summary="Einzelne Quelle löschen",
                 description="Entfernt Vektoren NUR dieses Dokuments (Namespace "
                 "bleibt) und danach die Metadaten (Chunks via FK CASCADE).")
@@ -303,7 +306,7 @@ def create_app(
         store.delete_document(document_id, namespace=notebook_id)
         repository.delete_document(notebook_id, document_id)
 
-    @app.post("/notebooks/{notebook_id}/reset", status_code=204,
+    @app.post("/notebooks/{notebook_id}/reset", status_code=204, response_class=Response,
               summary="Notebook leeren, aber behalten")
     def reset_notebook(notebook_id: str) -> None:
         repository.get_notebook(notebook_id)
